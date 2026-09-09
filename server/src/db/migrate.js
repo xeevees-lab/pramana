@@ -6,6 +6,7 @@ import pg from 'pg';
 import config from '../config/index.js';
 import { setupNeo4jSchema } from './neo4j-schema.js';
 import { close as closeNeo4j } from './neo4j.js';
+import { seedSources } from './seeds/sources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
@@ -69,6 +70,14 @@ async function migrate() {
       console.log('[Migrate] All migrations already applied');
     } else {
       console.log(`[Migrate] Applied ${count} migration(s) successfully`);
+    }
+
+    // Seed default news sources
+    try {
+      console.log('[Migrate] Seeding default sources...');
+      await seedSources();
+    } catch (seedErr) {
+      console.warn('[Migrate] Seeding sources warning:', seedErr.message);
     }
 
     // Also apply Neo4j constraints & indexes

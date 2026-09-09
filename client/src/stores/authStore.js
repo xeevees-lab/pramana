@@ -65,6 +65,20 @@ const useAuthStore = create((set, get) => ({
       set({ error: err.message });
     }
   },
+
+  // Continue as guest for public intelligence exploration
+  continueAsGuest: () => {
+    set({
+      user: {
+        id: 'guest',
+        display_name: 'Guest Reader',
+        email: 'guest@pramana.local',
+        role: 'guest',
+      },
+      loading: false,
+      error: null,
+    });
+  },
 }));
 
 export default useAuthStore;

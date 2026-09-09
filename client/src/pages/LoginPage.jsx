@@ -1,7 +1,7 @@
 import useAuthStore from '../stores/authStore.js';
 
 export default function LoginPage() {
-  const { signIn, loading, error, isConfigured } = useAuthStore();
+  const { signIn, continueAsGuest, loading, error, isConfigured } = useAuthStore();
 
   return (
     <div className="login-page">
@@ -22,8 +22,8 @@ export default function LoginPage() {
             <div className="login-card__notice">
               <p className="login-card__notice-title">Authentication Not Configured</p>
               <p className="login-card__notice-text">
-                Firebase credentials are not set. To enable Google sign-in, add your Firebase
-                configuration to the <code>.env</code> file. See <code>SETUP.md</code> for details.
+                Firebase credentials are not set in <code>.env</code>. You can explore all live news feeds,
+                event dossiers, and intelligence features in Guest mode.
               </p>
             </div>
           )}
@@ -48,6 +48,17 @@ export default function LoginPage() {
             </svg>
             {loading ? 'Signing in…' : 'Sign in with Google'}
           </button>
+
+          <div style={{ margin: 'var(--space-4) 0', textAlign: 'center' }}>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={continueAsGuest}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              Explore Intelligence Platform (Guest Access) →
+            </button>
+          </div>
         </div>
 
         <div className="login-card__footer">

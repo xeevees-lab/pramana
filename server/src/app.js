@@ -6,6 +6,9 @@ import config from './config/index.js';
 import { initFirebase } from './plugins/firebase.js';
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
+import sourcesRoutes from './routes/sources.js';
+import articlesRoutes from './routes/articles.js';
+import eventsRoutes from './routes/events.js';
 
 /**
  * Create and configure the Fastify application instance.
@@ -30,7 +33,13 @@ export async function buildApp(opts = {}) {
 
   // --- CORS ---
   await app.register(cors, {
-    origin: config.cors.origin,
+    origin: (origin, cb) => {
+      if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin === config.clientUrl) {
+        cb(null, true);
+        return;
+      }
+      cb(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
   });
 
@@ -46,6 +55,9 @@ export async function buildApp(opts = {}) {
   // --- Routes ---
   await app.register(healthRoutes, { prefix: '/api' });
   await app.register(authRoutes, { prefix: '/api' });
+  await app.register(sourcesRoutes, { prefix: '/api' });
+  await app.register(articlesRoutes, { prefix: '/api' });
+  await app.register(eventsRoutes, { prefix: '/api' });
 
   // --- Global error handler ---
   app.setErrorHandler((error, request, reply) => {
