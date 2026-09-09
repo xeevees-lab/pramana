@@ -5,8 +5,7 @@ services:
     plan: free
     rootDir: server
     buildCommand: npm install
-    startCommand: node src/server.js
-    preDeployCommand: node src/db/migrate.js
+    startCommand: node src/db/migrate.js && node src/server.js
     envVars:
       - key: NODE_ENV
         value: production
