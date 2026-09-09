@@ -69,14 +69,51 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Delete account
+  // Update profile
+  updateProfile: async (data) => {
+    const res = await api.patch('/auth/profile', data);
+    if (res?.user) {
+      set({ user: res.user });
+    }
+    return res.user;
+  },
+
+  // Fetch settings & system status
+  fetchSettings: async () => {
+    const res = await api.get('/auth/settings');
+    if (res?.settings) {
+      set((state) => ({
+        user: state.user ? { ...state.user, settings: res.settings } : null,
+      }));
+    }
+    return res;
+  },
+
+  // Update settings
+  updateSettings: async (settingsData) => {
+    const res = await api.put('/auth/settings', settingsData);
+    if (res?.settings) {
+      set((state) => ({
+        user: state.user ? { ...state.user, settings: res.settings } : null,
+      }));
+    }
+    return res.settings;
+  },
+
+  // Fetch real account stats
+  fetchStats: async () => {
+    return api.get('/auth/stats');
+  },
+
+  // Delete account (requires explicit confirmation)
   deleteAccount: async () => {
     try {
-      await api.delete('/auth/account');
+      await api.delete('/auth/account', { confirmation: 'DELETE' });
       await firebaseSignOut();
       set({ user: null, firebaseUser: null, error: null });
     } catch (err) {
       set({ error: err.message });
+      throw err;
     }
   },
 
@@ -88,6 +125,12 @@ const useAuthStore = create((set, get) => ({
         display_name: 'Guest Reader',
         email: 'guest@pramana.local',
         role: 'guest',
+        bio: 'Visiting analyst in guest preview mode.',
+        settings: {
+          ai: { provider: 'gemini', model: 'gemini-2.5-flash', temperature: 0.3 },
+          research: { research_depth: 'standard', response_depth: 'detailed', citation_style: 'inline' },
+          privacy: { save_search_history: false, analytics_opt_in: false },
+        },
       },
       loading: false,
       error: null,

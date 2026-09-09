@@ -43,10 +43,10 @@ export async function requireAuth(request, reply) {
      ON CONFLICT (firebase_uid)
      DO UPDATE SET
        email = EXCLUDED.email,
-       display_name = EXCLUDED.display_name,
-       photo_url = EXCLUDED.photo_url,
+       display_name = COALESCE(NULLIF(users.display_name, ''), EXCLUDED.display_name),
+       photo_url = COALESCE(EXCLUDED.photo_url, users.photo_url),
        last_login_at = NOW()
-     RETURNING id, firebase_uid, email, display_name, photo_url, role, created_at`,
+     RETURNING id, firebase_uid, email, display_name, photo_url, custom_avatar_url, bio, role, settings, created_at, last_login_at`,
     [
       decoded.uid,
       decoded.email || '',
@@ -76,7 +76,7 @@ export async function optionalAuth(request, reply) {
   }
 
   const { rows } = await query(
-    'SELECT id, firebase_uid, email, display_name, photo_url, role, created_at FROM users WHERE firebase_uid = $1',
+    'SELECT id, firebase_uid, email, display_name, photo_url, custom_avatar_url, bio, role, settings, created_at, last_login_at FROM users WHERE firebase_uid = $1',
     [decoded.uid]
   );
 

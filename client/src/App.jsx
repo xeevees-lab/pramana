@@ -9,6 +9,8 @@ import ExplorePage from './pages/ExplorePage';
 import AskPage from './pages/AskPage';
 import FactCheckPage from './pages/FactCheckPage';
 import EventPage from './pages/EventPage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import './styles/login.css';
 
@@ -47,6 +49,8 @@ export default function App() {
           <Route path="/ask" element={<AskPage />} />
           <Route path="/fact-check" element={<FactCheckPage />} />
           <Route path="/event/:id" element={<EventPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
