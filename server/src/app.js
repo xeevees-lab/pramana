@@ -26,6 +26,21 @@ export async function buildApp(opts = {}) {
     ...opts,
   });
 
+  // --- Content Type Parsers ---
+  // Allow empty bodies with Content-Type: application/json (e.g. POST /api/auth/session)
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    if (!body || body.trim() === '') {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body));
+    } catch (err) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
   // --- Security ---
   await app.register(helmet, {
     contentSecurityPolicy: false, // CSP managed separately for SPA
