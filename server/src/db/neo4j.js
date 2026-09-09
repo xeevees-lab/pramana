@@ -14,7 +14,8 @@ export function getDriver() {
       neo4j.auth.basic(config.neo4j.user, config.neo4j.password),
       {
         maxConnectionPoolSize: 50,
-        connectionAcquisitionTimeout: 10000,
+        connectionTimeout: 10000,
+        connectionAcquisitionTimeout: 15000,
         logging: {
           level: config.env === 'development' ? 'warn' : 'error',
           logger: (level, message) => console[level](`[Neo4j] ${message}`),

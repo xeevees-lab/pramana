@@ -36,7 +36,7 @@ export async function generateEmbedding(text) {
     // Truncate to reasonable token limit (~2000 words)
     const truncated = text.slice(0, 8000);
     const response = await client.models.embedContent({
-      model: 'text-embedding-004',
+      model: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
       contents: truncated,
     });
 
@@ -72,8 +72,9 @@ ${text}
 JSON array:`;
 
   try {
+    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -121,8 +122,9 @@ ${text}
 JSON array:`;
 
   try {
+    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -162,8 +164,9 @@ ${articleSnippets.join('\n---\n')}
 JSON object:`;
 
   try {
+    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

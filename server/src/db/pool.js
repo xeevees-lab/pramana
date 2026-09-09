@@ -1,11 +1,20 @@
 import pg from 'pg';
 import config from '../config/index.js';
 
+const isCloudDb =
+  config.env === 'production' ||
+  (config.db.connectionString &&
+    (config.db.connectionString.includes('sslmode=') ||
+      config.db.connectionString.includes('supabase') ||
+      config.db.connectionString.includes('neon.tech') ||
+      config.db.connectionString.includes('render.com')));
+
 const pool = new pg.Pool({
   connectionString: config.db.connectionString,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  ssl: isCloudDb ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('error', (err) => {

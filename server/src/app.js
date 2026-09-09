@@ -49,7 +49,14 @@ export async function buildApp(opts = {}) {
   // --- CORS ---
   await app.register(cors, {
     origin: (origin, cb) => {
-      if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin === config.clientUrl) {
+      if (
+        !origin ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        origin === config.clientUrl ||
+        (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) ||
+        /\.vercel\.app$/.test(origin) ||
+        /\.onrender\.com$/.test(origin)
+      ) {
         cb(null, true);
         return;
       }

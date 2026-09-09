@@ -12,7 +12,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 async function migrate() {
-  const client = new pg.Client({ connectionString: config.db.connectionString });
+  const isCloudDb =
+    config.env === 'production' ||
+    (config.db.connectionString &&
+      (config.db.connectionString.includes('sslmode=') ||
+        config.db.connectionString.includes('supabase') ||
+        config.db.connectionString.includes('neon.tech') ||
+        config.db.connectionString.includes('render.com')));
+
+  const client = new pg.Client({
+    connectionString: config.db.connectionString,
+    ssl: isCloudDb ? { rejectUnauthorized: false } : false,
+  });
 
   try {
     await client.connect();
