@@ -35,13 +35,18 @@ export async function generateEmbedding(text) {
   try {
     // Truncate to reasonable token limit (~2000 words)
     const truncated = text.slice(0, 8000);
+    const model = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
     const response = await client.models.embedContent({
-      model: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+      model,
       contents: truncated,
+      config: {
+        outputDimensionality: 768,
+      },
     });
 
-    if (response?.embedding?.values) {
-      return response.embedding.values;
+    const values = response?.embedding?.values || response?.embeddings?.[0]?.values;
+    if (Array.isArray(values) && values.length > 0) {
+      return values;
     }
     return null;
   } catch (err) {
@@ -72,7 +77,7 @@ ${text}
 JSON array:`;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     const response = await client.models.generateContent({
       model,
       contents: prompt,
@@ -122,7 +127,7 @@ ${text}
 JSON array:`;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     const response = await client.models.generateContent({
       model,
       contents: prompt,
@@ -164,7 +169,7 @@ ${articleSnippets.join('\n---\n')}
 JSON object:`;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     const response = await client.models.generateContent({
       model,
       contents: prompt,

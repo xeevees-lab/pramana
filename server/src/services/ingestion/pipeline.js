@@ -182,6 +182,10 @@ export async function ingestSource(source) {
         }
       }
 
+      if (geminiAvailable) {
+        await new Promise(r => setTimeout(r, 250));
+      }
+
       ingested++;
     } catch (articleErr) {
       console.error(`[Pipeline] Error processing article "${raw.title?.slice(0, 50)}":`, articleErr.message);
