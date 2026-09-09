@@ -257,16 +257,17 @@ export async function queryGraphContext({
   let entities = [];
   let relatedEvents = [];
   let causalLinks = [];
+  let discoveredArticleIds = [];
+  let discoveredEventIds = [];
 
   try {
-    // 1. Traverse 1-hop and 2-hop connected entities and events
+    // 1. Traverse 1-hop and 2-hop connected entities, articles, and events
     if (cleanEntityNames.length > 0 || cleanEventIds.length > 0) {
       const cypher = `
         MATCH (ent)
         WHERE (ent.name IN $entityNames OR ent.id IN $entityNames)
            OR (ent:Event AND ent.id IN $eventIds)
         OPTIONAL MATCH (ent)-[r]-(connected)
-        WHERE NOT connected:Article
         RETURN ent.name AS originName,
                labels(ent) AS originLabels,
                type(r) AS relType,
@@ -292,6 +293,7 @@ export async function queryGraphContext({
 
         if (targetLabels.includes('Event')) {
           if (targetId && !cleanEventIds.includes(targetId)) {
+            discoveredEventIds.push(targetId);
             relatedEvents.push({
               id: targetId,
               title: targetName,
@@ -299,6 +301,8 @@ export async function queryGraphContext({
               relationship: relType || 'RELATED_TO',
             });
           }
+        } else if (targetLabels.includes('Article')) {
+          if (targetId) discoveredArticleIds.push(targetId);
         } else if (targetName) {
           entities.push({
             name: targetName,
@@ -355,6 +359,8 @@ export async function queryGraphContext({
       entities,
       relatedEvents,
       causalLinks,
+      discoveredArticleIds: [...new Set(discoveredArticleIds)],
+      discoveredEventIds: [...new Set(discoveredEventIds)],
       graphAvailable: true,
     };
   } catch (err) {

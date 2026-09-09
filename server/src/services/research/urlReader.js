@@ -191,3 +191,6 @@ export async function readPublicUrl(rawUrl) {
     };
   }
 }
+
+export const readUrlContent = readPublicUrl;
+

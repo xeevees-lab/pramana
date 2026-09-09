@@ -10,6 +10,7 @@ import EventPage from './pages/EventPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import FloatingIntelligence from './components/common/FloatingIntelligence';
 import './styles/login.css';
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
+      <FloatingIntelligence />
     </div>
   );
 }
