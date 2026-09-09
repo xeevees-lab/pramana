@@ -1,18 +1,21 @@
 import { query } from '../../db/pool.js';
 import { getGeminiClient, isGeminiConfigured } from '../gemini.js';
+import { assembleCausalChain } from './causalEngine.js';
+import { buildTemporalSequence } from './temporalEngine.js';
+import { verifyClaim, classifySourceHierarchy } from './claimVerifier.js';
+import { analyzeNarratives } from './narrativeAnalyzer.js';
+import { computeGroundedForecast } from './forecastEngine.js';
+import { queryGraphContext } from './knowledgeGraph.js';
 
 /**
- * Deterministic fallback to construct rich report sections directly from data
- * when AI synthesis is unavailable or rate-limited.
+ * Deterministic baseline overview constructor when LLM is unavailable.
  */
-function buildDeterministicSections(event, articles, claims, entities) {
-  // Verified picture
+function buildDeterministicSections(event, articles, claims) {
   const verifiedClaims = claims.filter(c => c.verification_status === 'VERIFIED');
   const verifiedPicture = verifiedClaims.length > 0
     ? verifiedClaims.slice(0, 4).map(c => c.text).join(' ')
-    : (event.summary || (articles[0]?.summary) || 'Reporting is currently developing across independent sources.');
+    : (event.summary || articles[0]?.summary || 'Reporting is currently developing across independent sources.');
 
-  // What happened
   const narrativeParagraphs = [];
   if (event.summary) {
     narrativeParagraphs.push(event.summary);
@@ -24,7 +27,6 @@ function buildDeterministicSections(event, articles, claims, entities) {
   }
   const whatHappened = narrativeParagraphs.join('\n\n') || event.summary || '';
 
-  // Why this happened (causal claims & background)
   const causalClaims = claims.filter(c => c.claim_type === 'causal' || c.information_class === 'context');
   const whyThisHappened = causalClaims.length > 0
     ? causalClaims.map(c => c.text).join(' ')
@@ -38,9 +40,10 @@ function buildDeterministicSections(event, articles, claims, entities) {
 }
 
 /**
- * Assemble a comprehensive 18-section long-form intelligence report for an event.
+ * Assemble a comprehensive long-form research intelligence report for an event.
  * Combines real database records (articles, claims, evidence, entities, narratives, forecasts)
- * with grounded AI synthesis and deterministic fallback.
+ * with knowledge graph traversal, causal reasoning, temporal sequencing, syndication-verified claims,
+ * and deterministic ML forecasting.
  *
  * @param {object} event - Event record from database
  * @param {Array} articles - Articles associated with the event
@@ -60,7 +63,7 @@ export async function assembleEventReport(
   forecasts = [],
   relatedEvents = []
 ) {
-  // 1. Meta information
+  // 1. Meta Information
   const meta = {
     eventId: event.id,
     firstReportedAt: event.first_reported_at || event.created_at,
@@ -74,63 +77,107 @@ export async function assembleEventReport(
     country: event.country_code || null,
   };
 
-  // 2. Separate claims by verification status & type
-  const confirmedClaims = claims.filter(c => c.verification_status === 'VERIFIED');
-  const uncertainClaims = claims.filter(c => c.verification_status === 'UNVERIFIED');
-  const contradictoryClaims = claims.filter(c => c.verification_status === 'CONTRADICTED');
+  // 2. Query Knowledge Graph for Connected Entities and Graph-Derived Related Events
+  let graphData = { entities: [], relatedEvents: [], causalLinks: [] };
+  try {
+    graphData = await queryGraphContext({
+      eventIds: event.id ? [event.id] : [],
+      entityNames: entities.map(e => e.name),
+      limit: 10,
+    });
+  } catch (err) {
+    // Graceful graph fallback
+  }
 
-  // 3. Separate entities by domain
-  const legalAndPolicyEntities = entities.filter(e =>
+  // Combine related events from PostgreSQL and Neo4j
+  const mergedRelatedEvents = [...relatedEvents];
+  const seenEventIds = new Set(mergedRelatedEvents.map(e => e.id));
+  for (const grEvent of graphData.relatedEvents) {
+    if (!seenEventIds.has(grEvent.id) && grEvent.id !== event.id) {
+      mergedRelatedEvents.push({
+        id: grEvent.id,
+        title: grEvent.title,
+        category: grEvent.category || event.category,
+      });
+      seenEventIds.add(grEvent.id);
+    }
+  }
+
+  // 3. Evidence-Grounded Causal Sequence (9 Stages)
+  const causalResult = await assembleCausalChain({
+    event,
+    articles,
+    claims,
+    existingCausalLinks: graphData.causalLinks,
+  });
+
+  // Identify stages with missing evidence for honest reporting
+  const insufficientEvidenceGaps = Object.entries(causalResult.stages)
+    .filter(([_, data]) => data.status === 'MISSING_EVIDENCE')
+    .map(([stage]) => stage.replace('_', ' '));
+
+  // 4. Temporal Milestones
+  const { timeline } = buildTemporalSequence({ event, articles, claims });
+
+  // 5. Deterministic Claim Verification with Syndication De-duplication
+  const verifiedClaimsList = [];
+  const uncertainClaimsList = [];
+  const contradictoryClaimsList = [];
+
+  for (const rawClaim of claims) {
+    const verified = verifyClaim(rawClaim, articles);
+    const enriched = {
+      id: rawClaim.id,
+      text: rawClaim.text,
+      claim_type: rawClaim.claim_type,
+      information_class: rawClaim.information_class,
+      verification_status: verified.status,
+      badgeLabel: verified.badgeLabel,
+      independentSourceCount: verified.independentSourceCount,
+      provenance: verified.provenance,
+      explanation: verified.explanation,
+    };
+
+    if (verified.status === 'VERIFIED') {
+      verifiedClaimsList.push(enriched);
+    } else if (verified.status === 'CONTRADICTED') {
+      contradictoryClaimsList.push(enriched);
+    } else {
+      uncertainClaimsList.push(enriched);
+    }
+  }
+
+  // 6. Separate Entities by Domain & Merge Graph Entities
+  const allEntities = [...entities];
+  const seenEntNames = new Set(allEntities.map(e => e.name.toLowerCase()));
+  for (const gEnt of graphData.entities) {
+    if (!seenEntNames.has(gEnt.name.toLowerCase())) {
+      allEntities.push({
+        id: `graph-${gEnt.name}`,
+        name: gEnt.name,
+        type: (gEnt.type || 'topic').toLowerCase(),
+        description: `Connected via Knowledge Graph (${gEnt.role})`,
+      });
+      seenEntNames.add(gEnt.name.toLowerCase());
+    }
+  }
+
+  const legalAndPolicyEntities = allEntities.filter(e =>
     e.type === 'law' || e.type === 'policy' || e.type === 'document'
   );
-  const peopleEntities = entities.filter(e => e.type === 'person');
-  const organizationEntities = entities.filter(e => e.type === 'organization');
-  const locationEntities = entities.filter(e =>
+  const peopleEntities = allEntities.filter(e => e.type === 'person');
+  const organizationEntities = allEntities.filter(e => e.type === 'organization');
+  const locationEntities = allEntities.filter(e =>
     e.type === 'country' || e.type === 'city' || e.type === 'location'
   );
 
-  // 4. Construct chronological timeline from articles and claims
-  const timelineItems = [];
-  for (const art of articles) {
-    if (art.published_at && art.title) {
-      timelineItems.push({
-        id: `art-${art.id}`,
-        timestamp: art.published_at,
-        source: art.source_name || 'News Wire',
-        title: art.title,
-        description: art.summary ? art.summary.slice(0, 220) + '...' : null,
-        url: art.url,
-      });
-    }
-  }
-  for (const clm of claims) {
-    if (clm.extracted_at && clm.text) {
-      timelineItems.push({
-        id: `clm-${clm.id}`,
-        timestamp: clm.extracted_at,
-        source: 'Intelligence Extraction',
-        title: clm.text,
-        description: `Verified Status: ${clm.verification_status}`,
-        url: null,
-      });
-    }
-  }
-  // Sort timeline chronologically (earliest to latest)
-  timelineItems.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  // 7. Cross-Source Media Coverage & Narrative Analysis
+  const narrativeResult = await analyzeNarratives(articles, narratives);
 
-  // Deduplicate near-identical timeline titles
-  const seenTitles = new Set();
-  const timeline = timelineItems.filter(item => {
-    const key = item.title.toLowerCase().slice(0, 40);
-    if (seenTitles.has(key)) return false;
-    seenTitles.add(key);
-    return true;
-  }).slice(0, 15);
-
-  // 5. Media coverage comparison
   const mediaCoverage = articles.map(art => ({
     id: art.id,
     sourceName: art.source_name || 'News Wire',
+    sourceType: classifySourceHierarchy(art),
     sourceReliability: art.source_reliability ? Math.round(art.source_reliability * 100) : null,
     title: art.title,
     summary: art.summary,
@@ -139,14 +186,23 @@ export async function assembleEventReport(
     url: art.url,
   }));
 
-  // 6. Deterministic baseline
-  const deterministic = buildDeterministicSections(event, articles, claims, entities);
+  // 8. Deterministic ML Escalation Forecast
+  const mlForecast = await computeGroundedForecast({
+    event,
+    articles,
+    claims,
+    entities: allEntities,
+    persist: false,
+  });
+
+  // 9. Deterministic Baseline Sections
+  const deterministic = buildDeterministicSections(event, articles, claims);
   let verifiedPicture = deterministic.verifiedPicture;
   let whatHappened = deterministic.whatHappened;
-  let whyThisHappened = deterministic.whyThisHappened;
+  let whyThisHappened = deterministic.whyThisHappened || causalResult.summaryCausalChain;
   let historicalContext = null;
 
-  // 7. If cached in database and fresh, use cached generated_article
+  // 10. Check Database Cache
   let parsedCached = null;
   if (event.generated_article) {
     try {
@@ -158,11 +214,11 @@ export async function assembleEventReport(
         historicalContext = parsedCached.historicalContext || null;
       }
     } catch {
-      // Not JSON, ignore and regenerate
+      // ignore non-JSON cache
     }
   }
 
-  // 8. If AI configured and no valid cache, synthesize rich grounded overview
+  // 11. Grounded Overview Synthesis via Gemini (if not cached)
   if (!parsedCached && isGeminiConfigured() && articles.length > 0) {
     const client = getGeminiClient();
     if (client) {
@@ -171,11 +227,11 @@ export async function assembleEventReport(
       ).join('\n---\n');
 
       const claimsSnippet = claims.slice(0, 8).map(c =>
-        `- [${c.verification_status}] ${c.text} (${c.claim_type})`
+        `- [${c.verification_status}] ${c.text}`
       ).join('\n');
 
-      const prompt = `You are the lead intelligence analyst for Pramāṇa.
-Generate a grounded, professional long-form analysis of this real news event based ONLY on the evidence provided below.
+      const prompt = `You are the lead intelligence research analyst at Pramāṇa.
+Synthesize a grounded, professional long-form analysis of this real news event based ONLY on the evidence provided.
 Do NOT invent facts, dates, sources, or predictions not present in the snippets.
 
 Event Title: ${event.title}
@@ -188,25 +244,27 @@ ${articleSnippets}
 Claims Extracted:
 ${claimsSnippet}
 
-Respond strictly in valid JSON with these keys:
+Respond strictly in valid JSON:
 {
   "verifiedPicture": "2-3 crisp sentences summarizing the established, verifiable core facts.",
-  "whatHappened": "Detailed chronological explanation of the developments across 2-3 substantive paragraphs.",
-  "whyThisHappened": "Context and underlying causal drivers supported by the reporting.",
-  "historicalContext": "Historical background or precedent mentioned in the reports (or null if none)."
+  "whatHappened": "Detailed chronological explanation across 2-3 substantive paragraphs.",
+  "whyThisHappened": "Causal drivers supported strictly by the reporting.",
+  "historicalContext": "Historical precedent mentioned in reporting (or null if none)."
 }
 
 JSON:`;
 
       try {
         const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-        const response = await client.models.generateContent({
+        const callPromise = client.models.generateContent({
           model,
           contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
+          config: { responseMimeType: 'application/json' },
         });
+        const timeoutPromise = new Promise((_, rej) =>
+          setTimeout(() => rej(new Error('LLM synthesis timeout')), 3000)
+        );
+        const response = await Promise.race([callPromise, timeoutPromise]);
 
         const parsed = JSON.parse(response.text.trim());
         if (parsed.verifiedPicture) verifiedPicture = parsed.verifiedPicture;
@@ -220,7 +278,7 @@ JSON:`;
           [JSON.stringify(parsed), event.id]
         ).catch(() => {});
       } catch (err) {
-        console.warn('[EventReport] Gemini synthesis warning (using deterministic):', err.message);
+        // Deterministic fallback preserved
       }
     }
   }
@@ -230,9 +288,10 @@ JSON:`;
     meta,
     verifiedPicture,
     whatHappened,
-    confirmedClaims,
-    uncertainClaims,
-    contradictoryClaims,
+    confirmedClaims: verifiedClaimsList,
+    uncertainClaims: uncertainClaimsList,
+    contradictoryClaims: contradictoryClaimsList,
+    causalChain: causalResult,
     timeline,
     whyThisHappened,
     historicalContext,
@@ -241,11 +300,16 @@ JSON:`;
     organizations: organizationEntities,
     locations: locationEntities,
     mediaCoverage,
+    framingDistribution: narrativeResult.framingDistribution,
+    framingObservation: narrativeResult.framingObservation,
     narratives,
-    relatedEvents,
-    forecasts,
+    relatedEvents: mergedRelatedEvents.slice(0, 8),
+    forecasts: mlForecast.status === 'FORECAST_PRODUCED' ? [mlForecast] : forecasts,
+    mlForecast,
+    insufficientEvidenceGaps,
     sources: mediaCoverage.map(m => ({
       name: m.sourceName,
+      type: m.sourceType,
       title: m.title,
       url: m.url,
       reliability: m.sourceReliability,

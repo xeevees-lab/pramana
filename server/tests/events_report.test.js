@@ -64,6 +64,9 @@ describe('Event Long-Form Intelligence Report', () => {
     expect(Array.isArray(json.report.uncertainClaims)).toBe(true);
     expect(Array.isArray(json.report.timeline)).toBe(true);
     expect(Array.isArray(json.report.sources)).toBe(true);
+    expect(json.report.causalChain).toBeDefined();
+    expect(json.report.mlForecast).toBeDefined();
+    expect(Array.isArray(json.report.insufficientEvidenceGaps)).toBe(true);
     expect(json.report.lastUpdated).toBeDefined();
   });
 });

@@ -198,6 +198,13 @@ export async function ingestSource(source) {
     [source.id]
   );
 
+  // If new articles were ingested, asynchronously refresh Neo4j Knowledge Graph
+  if (ingested > 0) {
+    import('../intelligence/knowledgeGraph.js')
+      .then(({ syncPostgresToNeo4j }) => syncPostgresToNeo4j())
+      .catch((err) => console.warn('[Pipeline] Neo4j async sync warning:', err.message));
+  }
+
   const durationMs = Date.now() - startTime;
   console.log(
     `[Pipeline] Finished ${source.name}: ${ingested} ingested, ${duplicates} duplicates, ${skipped} skipped (${durationMs}ms)`
