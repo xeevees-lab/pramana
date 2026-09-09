@@ -2,6 +2,21 @@ import { create } from 'zustand';
 import { onAuthChange, signInWithGoogle, firebaseSignOut, isConfigured, getIdToken } from '../services/firebase.js';
 import { api } from '../services/api.js';
 
+function formatAuthError(err) {
+  switch (err?.code) {
+    case 'auth/configuration-not-found':
+      return 'Google Sign-In is not enabled yet in your Firebase project. In the Firebase Console, go to Build → Authentication → "Sign-in method" tab, click "Google", toggle "Enable", select a Project Support Email, and click "Save".';
+    case 'auth/unauthorized-domain':
+      return 'The current domain (localhost) is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and ensure "localhost" is listed.';
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is disabled. Please enable it in Firebase Console → Authentication → Sign-in method.';
+    case 'auth/popup-blocked':
+      return 'The sign-in popup was blocked by your browser. Please allow popups for localhost and try again.';
+    default:
+      return err?.message || 'An error occurred during authentication.';
+  }
+}
+
 const useAuthStore = create((set, get) => ({
   // State
   user: null,           // Database user object from server
@@ -36,11 +51,10 @@ const useAuthStore = create((set, get) => ({
       await signInWithGoogle();
       // onAuthChange callback will handle the rest
     } catch (err) {
-      // User cancelled or error
-      if (err.code !== 'auth/popup-closed-by-user') {
-        set({ error: err.message, loading: false });
-      } else {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         set({ loading: false });
+      } else {
+        set({ error: formatAuthError(err), loading: false });
       }
     }
   },
