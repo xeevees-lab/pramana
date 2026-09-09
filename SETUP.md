@@ -42,7 +42,7 @@ docker compose up -d
 ```
 
 This starts:
-- **PostgreSQL 16** with pgvector on port `5432`
+- **PostgreSQL 16** with pgvector on port `5433` (mapped to avoid conflicts with local postgres on 5432)
 - **Neo4j 5** on ports `7474` (browser) and `7687` (Bolt)
 
 Verify they're running:
@@ -50,11 +50,12 @@ Verify they're running:
 docker compose ps
 ```
 
-### 4. Run database migrations
+### 4. Run database migrations & seed sources
 
 ```bash
 npm run db:migrate
 ```
+*Applies 15 PostgreSQL tables, pgvector HNSW indexes, Neo4j schema constraints, and seeds default global news sources.*
 
 ### 5. Start the application
 
@@ -62,14 +63,17 @@ npm run db:migrate
 npm run dev
 ```
 
-This starts both:
-- **Backend** at `http://localhost:3001`
-- **Frontend** at `http://localhost:5173`
+Or run them individually:
+```bash
+npm run dev:server   # Fastify backend on port 3001
+npm run dev:client   # Vite React frontend (usually on port 5173 or 5174)
+```
 
-### 6. Verify
+### 6. Access the Application
 
-- Open `http://localhost:5173` in your browser
-- Check the server health endpoint: `http://localhost:3001/api/health`
+- Open `http://localhost:5173` (or `http://localhost:5174`) in your browser
+- Click **"Explore Intelligence Platform (Guest Access) →"** to immediately browse live news intelligence, event dossiers, and the real-time live wire
+- Check the server health: `http://localhost:3001/api/health`
 - Check readiness: `http://localhost:3001/api/health/ready`
 
 ## Running Tests
