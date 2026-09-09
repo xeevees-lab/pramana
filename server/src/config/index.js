@@ -1,4 +1,20 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Load root .env first, then local .env if present
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config();
+
+function formatPrivateKey(rawKey) {
+  if (!rawKey) return undefined;
+  let key = rawKey.trim().replace(/^['"]|['"]$/g, '').replace(/\\n/g, '\n').replace(/\r/g, '');
+  if (!key.includes('BEGIN PRIVATE KEY')) {
+    key = `-----BEGIN PRIVATE KEY-----\n${key}\n-----END PRIVATE KEY-----\n`;
+  }
+  return key;
+}
 
 const config = {
   env: process.env.NODE_ENV || 'development',
@@ -23,9 +39,7 @@ const config = {
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY
-      ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-      : undefined,
+    privateKey: formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY),
   },
 
   gemini: {
