@@ -1,0 +1,26 @@
+{
+  "name": "pramana",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PRAMĀṆA — Global real-time news intelligence, verification, and forecasting platform",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "test": "npm run test -w server",
+    "test:e2e": "npx playwright test",
+    "lint": "eslint .",
+    "db:migrate": "npm run migrate -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
