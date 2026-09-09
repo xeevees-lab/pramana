@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './stores/authStore.js';
 import Header from './components/layout/Header';
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
 import LivePage from './pages/LivePage';
 import ExplorePage from './pages/ExplorePage';
 import AskPage from './pages/AskPage';
-import FactCheckPage from './pages/FactCheckPage';
 import EventPage from './pages/EventPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
@@ -43,11 +41,12 @@ export default function App() {
       <Header />
       <main className="app-main" id="main-content">
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/live" element={<LivePage />} />
+          <Route path="/" element={<Navigate to="/explore" replace />} />
+          <Route path="/dashboard" element={<Navigate to="/explore" replace />} />
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/live" element={<LivePage />} />
           <Route path="/ask" element={<AskPage />} />
-          <Route path="/fact-check" element={<FactCheckPage />} />
+          <Route path="/fact-check" element={<Navigate to="/ask?mode=fact-check" replace />} />
           <Route path="/event/:id" element={<EventPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

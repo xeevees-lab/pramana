@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import sourcesRoutes from './routes/sources.js';
 import articlesRoutes from './routes/articles.js';
 import eventsRoutes from './routes/events.js';
+import askRoutes from './routes/ask.js';
 
 /**
  * Create and configure the Fastify application instance.
@@ -80,6 +81,7 @@ export async function buildApp(opts = {}) {
   await app.register(sourcesRoutes, { prefix: '/api' });
   await app.register(articlesRoutes, { prefix: '/api' });
   await app.register(eventsRoutes, { prefix: '/api' });
+  await app.register(askRoutes, { prefix: '/api' });
 
   // --- Global error handler ---
   app.setErrorHandler((error, request, reply) => {

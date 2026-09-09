@@ -3,11 +3,9 @@ import useAuthStore from '../../stores/authStore.js';
 import { useState, useRef, useEffect } from 'react';
 
 const navLinks = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/live', label: 'Live' },
   { to: '/explore', label: 'Explore' },
+  { to: '/live', label: 'Live' },
   { to: '/ask', label: 'Ask' },
-  { to: '/fact-check', label: 'Fact Check' },
 ];
 
 export default function Header() {
@@ -30,7 +28,7 @@ export default function Header() {
 
   return (
     <header className="app-header" role="banner">
-      <NavLink to="/" className="app-header__logo" aria-label="PRAMĀṆA home">
+      <NavLink to="/explore" className="app-header__logo" aria-label="PRAMĀṆA home">
         PRAMĀṆA
       </NavLink>
 
@@ -39,7 +37,6 @@ export default function Header() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
             className={({ isActive }) =>
               `app-header__nav-link${isActive ? ' app-header__nav-link--active' : ''}`
             }

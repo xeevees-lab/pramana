@@ -1,4 +1,5 @@
 import { query } from '../db/pool.js';
+import { assembleEventReport } from '../services/intelligence/eventReport.js';
 
 /**
  * Events and intelligence query routes.
@@ -152,7 +153,7 @@ export default async function eventsRoutes(app) {
     const event = events[0];
 
     // Parallel fetch related data
-    const [articlesRes, claimsRes, entitiesRes, narrativesRes, forecastsRes] = await Promise.all([
+    const [articlesRes, claimsRes, entitiesRes, narrativesRes, forecastsRes, relatedEventsRes] = await Promise.all([
       query(
         `SELECT
            a.id,
@@ -218,7 +219,25 @@ export default async function eventsRoutes(app) {
          ORDER BY predicted_at DESC`,
         [id]
       ),
+      query(
+        `SELECT id, title, summary, category, severity, status, image_url, last_updated_at
+         FROM events
+         WHERE id != $1 AND (category = $2 OR (country_code IS NOT NULL AND country_code = $3))
+         ORDER BY last_updated_at DESC
+         LIMIT 4`,
+        [id, event.category, event.country_code || '']
+      ),
     ]);
+
+    const report = await assembleEventReport(
+      event,
+      articlesRes.rows,
+      claimsRes.rows,
+      entitiesRes.rows,
+      narrativesRes.rows,
+      forecastsRes.rows,
+      relatedEventsRes.rows
+    );
 
     return {
       event,
@@ -227,6 +246,8 @@ export default async function eventsRoutes(app) {
       entities: entitiesRes.rows,
       narratives: narrativesRes.rows,
       forecasts: forecastsRes.rows,
+      relatedEvents: relatedEventsRes.rows,
+      report,
     };
   });
 }

@@ -1,0 +1,421 @@
+/* ==========================================================================
+   PRAMĀṆA — Long-Form Editorial Intelligence Report Styles
+   Light Mode Only · Editorial News Intelligence · Soft Lavender Accents
+   ========================================================================== */
+
+.event-report {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-2) var(--space-16);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  color: var(--color-ink, #1F2937);
+}
+
+/* Back Link */
+.event-report__back-nav {
+  margin-bottom: var(--space-6, 1.5rem);
+}
+
+.event-report__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6B7280;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.event-report__back-btn:hover {
+  color: #111827;
+}
+
+/* Header */
+.event-report__header {
+  border-bottom: 1px solid #E5E7EB;
+  padding-bottom: var(--space-8, 2rem);
+  margin-bottom: var(--space-8, 2rem);
+}
+
+.event-report__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.event-report__category {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #EDE9FE;
+  color: #6D28D9;
+}
+
+.event-report__title {
+  font-family: var(--font-serif, 'Newsreader', Georgia, serif);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.22;
+  color: #111827;
+  letter-spacing: -0.015em;
+  margin: 0 0 1.25rem 0;
+}
+
+.event-report__lead-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.8125rem;
+  color: #6B7280;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #E5E7EB;
+}
+
+.event-report__lead-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.event-report__lead-meta strong {
+  color: #1F2937;
+  font-weight: 600;
+}
+
+/* Section Common */
+.event-report__section {
+  margin-bottom: 3rem;
+}
+
+.event-report__section-title {
+  font-family: var(--font-serif, 'Newsreader', Georgia, serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-report__section-subtitle {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0 0 1.25rem 0;
+}
+
+/* The Verified Picture (Executive Callout) */
+.event-report__verified-picture {
+  background: linear-gradient(135deg, #FAF5FF 0%, #FFFFFF 100%);
+  border: 1px solid #DDD6FE;
+  border-left: 4px solid #8B5CF6;
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.04);
+}
+
+.event-report__verified-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7C3AED;
+  margin-bottom: 0.75rem;
+}
+
+.event-report__verified-text {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: #1F2937;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Narrative Prose */
+.event-report__prose {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: #374151;
+}
+
+.event-report__prose p {
+  margin-bottom: 1.25rem;
+}
+
+.event-report__prose p:last-child {
+  margin-bottom: 0;
+}
+
+/* Claims Grid */
+.event-report__claims-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.event-report__claim-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.event-report__claim-card:hover {
+  border-color: #C4B5FD;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.05);
+}
+
+.event-report__claim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-report__claim-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #111827;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Status Badges */
+.badge--verified {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.badge--unverified {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.badge--contradicted {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* Timeline Component */
+.event-report__timeline {
+  position: relative;
+  border-left: 2px solid #E5E7EB;
+  margin-left: 0.75rem;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.event-report__timeline-item {
+  position: relative;
+}
+
+.event-report__timeline-dot {
+  position: absolute;
+  left: calc(-1.5rem - 5px);
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #8B5CF6;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 2px #C4B5FD;
+}
+
+.event-report__timeline-time {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 2px;
+}
+
+.event-report__timeline-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+  margin: 0 0 4px 0;
+}
+
+.event-report__timeline-desc {
+  font-size: 0.8125rem;
+  color: #4B5563;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Entities Chips */
+.event-report__chips-group {
+  margin-bottom: 1.25rem;
+}
+
+.event-report__chips-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4B5563;
+  margin-bottom: 0.5rem;
+}
+
+.event-report__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-report__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #1F2937;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.event-report__chip-role {
+  font-size: 0.6875rem;
+  color: #8B5CF6;
+  font-weight: 600;
+}
+
+/* Sources & Media Cards */
+.event-report__sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.event-report__source-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.event-report__source-card:hover {
+  transform: translateY(-2px);
+  border-color: #DDD6FE;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.06);
+}
+
+.event-report__source-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #6D28D9;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.event-report__source-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.event-report__source-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7C3AED;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.event-report__source-link:hover {
+  text-decoration: underline;
+}
+
+/* Related Events Grid */
+.event-report__related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.event-report__related-card {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1rem;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.event-report__related-card:hover {
+  background: #FFFFFF;
+  border-color: #8B5CF6;
+}
+
+.event-report__related-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Report Footer */
+.event-report__footer {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
