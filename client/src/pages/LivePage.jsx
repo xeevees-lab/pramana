@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../services/api.js';
 
 function formatTime(dateString) {
   if (!dateString) return '';
@@ -18,8 +19,7 @@ export default function LivePage() {
   const [loading, setLoading] = useState(true);
 
   const fetchLive = () => {
-    fetch('/api/events/live?limit=50')
-      .then(r => r.json())
+    api.get('/events/live?limit=50')
       .then(data => {
         setEntries(data.entries || []);
         setLoading(false);

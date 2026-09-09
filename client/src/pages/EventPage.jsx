@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { api } from '../services/api.js';
 
 function formatDate(dateString) {
   if (!dateString) return 'Unknown';
@@ -23,13 +24,7 @@ export default function EventPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/events/${id}`)
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(res.status === 404 ? 'Event not found' : `Error loading event (${res.status})`);
-        }
-        return res.json();
-      })
+    api.get(`/events/${id}`)
       .then((d) => {
         if (!isMounted) return;
         setData(d);
@@ -37,7 +32,7 @@ export default function EventPage() {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError(err.message);
+        setError(err.message || 'Error loading event');
         setLoading(false);
       });
 

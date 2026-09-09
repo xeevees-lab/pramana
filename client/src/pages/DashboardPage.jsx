@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../services/api.js';
 
 const CATEGORIES = [
   'all',
@@ -46,8 +47,8 @@ export default function DashboardPage() {
     queryParams.set('limit', '30');
 
     Promise.all([
-      fetch(`/api/events?${queryParams.toString()}`).then(r => r.json()),
-      fetch('/api/events/live?limit=12').then(r => r.json()),
+      api.get(`/events?${queryParams.toString()}`),
+      api.get('/events/live?limit=12'),
     ])
       .then(([eventsData, liveData]) => {
         if (!isMounted) return;
