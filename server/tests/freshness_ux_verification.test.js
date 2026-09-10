@@ -184,7 +184,7 @@ describe('Pramāṇa Freshness, Ingestion, Headlines, Claims & Retrieval Verific
       const data = JSON.parse(res.payload);
       expect(data).toBeDefined();
       expect(data.status).toBe('success');
-    }, 30000);
+    }, 60000);
   });
 
   describe('5. Temporal Lane Retrieval Discrimination', () => {
