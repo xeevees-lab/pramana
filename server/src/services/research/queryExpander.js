@@ -3,12 +3,27 @@ import { getGeminiClient, isGeminiConfigured } from '../gemini.js';
 /**
  * Common stop words and query conversational boilerplate to strip from search terms.
  */
+/**
+ * Common stop words and query conversational boilerplate to strip from search terms.
+ */
 export const STOP_WORDS = new Set([
   'what', 'when', 'where', 'why', 'how', 'which', 'who', 'whom', 'whose',
   'with', 'from', 'this', 'that', 'these', 'those', 'there', 'their',
   'have', 'were', 'been', 'about', 'tell', 'does', 'will', 'would', 'could',
   'should', 'is', 'are', 'was', 'the', 'and', 'for', 'any', 'some', 'happened',
-  'occurred', 'happening', 'latest', 'recent', 'updates', 'update', 'news', 'reports'
+  'occurred', 'happening', 'latest', 'recent', 'updates', 'update', 'news', 'reports',
+  'report', 'finding', 'findings', 'study', 'studies', 'survey', 'surveys',
+  'explain', 'explains', 'detail', 'details', 'matter', 'matters', 'happen', 'happens',
+  'mean', 'means', 'say', 'says', 'give', 'gives', 'tell', 'tells', 'show', 'shows',
+  'find', 'finds', 'overview', 'summary', 'comprehensive',
+  'right', 'now', 'today', 'currently', 'moment', 'momentary'
+]);
+
+/**
+ * 2-letter tokens of high analytical and subject value that must never be dropped.
+ */
+export const HIGH_VALUE_SHORT_TOKENS = new Set([
+  'ai', 'eu', 'us', 'uk', 'un', 'ev', '5g', '6g', 'os', 'vr', 'ar', 'ip', 'g7', 'g8', 'pm', 'fm', 'pr'
 ]);
 
 /**
@@ -16,6 +31,12 @@ export const STOP_WORDS = new Set([
  * when Gemini LLM call is unavailable or rate-limited.
  */
 const DOMAIN_HEURISTICS = {
+  ai: ['artificial intelligence', 'machine learning', 'neural network', 'llm', 'deep learning', 'model launch', 'reasoning'],
+  technology: ['software', 'hardware', 'semiconductor', 'product launch', 'innovation', 'computing'],
+  tech: ['software', 'hardware', 'semiconductor', 'product launch', 'innovation', 'computing'],
+  launch: ['product launch', 'unveiled', 'debuted', 'released', 'announced'],
+  launches: ['product launch', 'unveiled', 'debuted', 'released', 'announced'],
+  japan: ['tokyo', 'fukushima', 'seismic', 'japan meteorological agency'],
   flood: ['rainfall', 'monsoon', 'river overflow', 'landslide', 'drainage', 'infrastructure', 'evacuation'],
   flooding: ['rainfall', 'monsoon', 'river overflow', 'landslide', 'drainage', 'infrastructure', 'evacuation'],
   quake: ['fault line', 'aftershocks', 'epicenter', 'casualties', 'structural damage', 'seismic'],
@@ -29,6 +50,10 @@ const DOMAIN_HEURISTICS = {
   trial: ['indictment', 'prosecution', 'testimony', 'verdict', 'defense counsel', 'evidence'],
   economy: ['inflation', 'interest rates', 'central bank', 'gdp growth', 'trade balance', 'employment'],
   tariff: ['import duties', 'trade deficit', 'customs', 'bilateral trade', 'retaliatory measures'],
+  unity: ['united', 'unification', 'integration', 'solidarity', 'european union', 'eu'],
+  united: ['unity', 'unification', 'integration', 'solidarity'],
+  europe: ['european', 'eu', 'brussels'],
+  european: ['europe', 'eu', 'brussels'],
 };
 
 /**
@@ -130,8 +155,8 @@ export async function expandQuery(userQuery) {
   const temporalIntent = classifyTemporalIntent(cleanQuery);
 
   // 1. Deterministic baseline extraction
-  const tokens = lower.split(/[^a-zA-Z0-9_-]+/).filter(t => t.length > 2);
-  const highSignalTokens = tokens.filter(t => !STOP_WORDS.has(t) && t.length > 2);
+  const tokens = lower.split(/[^a-zA-Z0-9_-]+/).filter(t => t.length > 2 || HIGH_VALUE_SHORT_TOKENS.has(t));
+  const highSignalTokens = tokens.filter(t => !STOP_WORDS.has(t) && (t.length > 2 || HIGH_VALUE_SHORT_TOKENS.has(t)));
   const detectedHypotheses = new Set();
   const searchKeywords = new Set(highSignalTokens.length > 0 ? highSignalTokens : tokens);
 
@@ -141,8 +166,9 @@ export async function expandQuery(userQuery) {
     }
   }
 
-  // Detect capitalized candidate entity names from original query
-  const capitalWords = cleanQuery.match(/\b[A-Z][a-z0-9_-]+(?:\s+[A-Z][a-z0-9_-]+)*\b/g) || [];
+  // Detect capitalized candidate entity names from original query (excluding stop words and question openers)
+  const capitalWords = (cleanQuery.match(/\b[A-Z][a-z0-9_-]+(?:\s+[A-Z][a-z0-9_-]+)*\b/g) || [])
+    .filter(w => !STOP_WORDS.has(w.toLowerCase()));
   const targetEntities = [...new Set(capitalWords)];
 
   let candidateHypotheses = Array.from(detectedHypotheses);

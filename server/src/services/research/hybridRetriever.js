@@ -35,10 +35,20 @@ export function computeTokenOverlap(queryTokens = [], targetText = '') {
     const stem = token.endsWith('ing') && token.length > 5 ? token.slice(0, -3)
       : token.endsWith('es') && token.length > 4 ? token.slice(0, -2)
       : token.endsWith('s') && token.length > 3 ? token.slice(0, -1)
+      : token.endsWith('y') && token.length > 4 ? token.slice(0, -1)
+      : token.endsWith('an') && token.length > 4 ? token.slice(0, -2)
       : token;
 
-    if (lowerText.includes(token) || (stem && lowerText.includes(stem))) {
-      matched++;
+    if (token.length <= 3) {
+      const regex = new RegExp(`\\b${token}\\b`, 'i');
+      if (regex.test(lowerText)) {
+        matched++;
+      }
+    } else {
+      const wordRegex = new RegExp(`\\b(${token}|${stem}\\w*)\\b`, 'i');
+      if (wordRegex.test(lowerText)) {
+        matched++;
+      }
     }
   }
   return matched / queryTokens.length;
@@ -158,17 +168,28 @@ export async function retrieveHybridContext({
 
   // 1b. Lexical multi-term token event retrieval
   if (highSignalTokens.length > 0) {
-    const tokenPatterns = highSignalTokens.map(t => `%${t}%`);
+    const eventClauses = [];
+    const eventParams = [];
+    highSignalTokens.forEach(t => {
+      if (t.length <= 3) {
+        eventParams.push(`\\m${t}\\M`);
+        eventClauses.push(`(title ~* $${eventParams.length} OR summary ~* $${eventParams.length})`);
+      } else {
+        eventParams.push(`%${t}%`);
+        eventClauses.push(`(title ILIKE $${eventParams.length} OR summary ILIKE $${eventParams.length})`);
+      }
+    });
+
     try {
       const { rows } = await query(
         `SELECT id, title, summary, category, severity, status, location_name, country_code,
                 source_count, article_count, first_reported_at, last_updated_at,
                 0.5 AS similarity
          FROM events
-         WHERE (${tokenPatterns.map((_, i) => `title ILIKE $${i + 1} OR summary ILIKE $${i + 1}`).join(' OR ')})
+         WHERE (${eventClauses.join(' OR ')})
          ORDER BY last_updated_at DESC
          LIMIT 25`,
-        tokenPatterns
+        eventParams
       );
       for (const row of rows) {
         if (!eventCandidateMap.has(row.id)) {
@@ -208,7 +229,18 @@ export async function retrieveHybridContext({
 
   // 2b. Lexical multi-term token article retrieval
   if (highSignalTokens.length > 0) {
-    const tokenPatterns = highSignalTokens.map(t => `%${t}%`);
+    const artClauses = [];
+    const artParams = [];
+    highSignalTokens.forEach(t => {
+      if (t.length <= 3) {
+        artParams.push(`\\m${t}\\M`);
+        artClauses.push(`(a.title ~* $${artParams.length} OR a.summary ~* $${artParams.length} OR a.content ~* $${artParams.length})`);
+      } else {
+        artParams.push(`%${t}%`);
+        artClauses.push(`(a.title ILIKE $${artParams.length} OR a.summary ILIKE $${artParams.length} OR a.content ILIKE $${artParams.length})`);
+      }
+    });
+
     try {
       const { rows } = await query(
         `SELECT a.id, a.title, a.summary, a.content, a.url, a.published_at, a.wire_service,
@@ -216,10 +248,10 @@ export async function retrieveHybridContext({
                 0.5 AS similarity
          FROM articles a
          LEFT JOIN sources s ON a.source_id = s.id
-         WHERE (${tokenPatterns.map((_, i) => `a.title ILIKE $${i + 1} OR a.summary ILIKE $${i + 1} OR a.content ILIKE $${i + 1}`).join(' OR ')})
+         WHERE (${artClauses.join(' OR ')})
          ORDER BY COALESCE(s.reliability_score, 0.5) DESC, a.published_at DESC
          LIMIT 35`,
-        tokenPatterns
+        artParams
       );
       for (const row of rows) {
         if (!articleCandidateMap.has(row.id)) {
@@ -346,24 +378,26 @@ export async function retrieveHybridContext({
 
     const sSemantic = typeof art.similarity === 'number' ? Math.max(0, Math.min(1, art.similarity)) : 0.5;
     const sLexical = computeTokenOverlap(highSignalTokens, textCorpus);
+    const sTitle = computeTokenOverlap(highSignalTokens, art.title);
     const sEntity = computeTokenOverlap(targetEntities.map(e => e.toLowerCase()), textCorpus);
     const sGraph = art.sourceChannel === 'graph_traversal' ? 1.0 : 0.0;
     const sTemporal = computeTemporalScore(art.published_at, temporalIntent);
     const sSource = art.reliability_score || 0.5;
 
-    // Composite multi-signal relevance score
+    // Composite multi-signal relevance score (headline matches prioritized over buried mentions)
+    const effectiveLexical = sTitle > 0 ? (0.5 * sLexical + 0.5 * sTitle) : (0.7 * sLexical);
     const compositeScore =
       weights.semantic * sSemantic +
-      weights.lexical * sLexical +
+      weights.lexical * effectiveLexical +
       weights.entity * sEntity +
       weights.graph * sGraph +
       weights.temporal * sTemporal +
       weights.sourceReliability * sSource;
 
     // Aggressive Negative Suppression Gate:
-    // If an article contains 0 lexical overlap with high-signal query tokens AND semantic similarity < 0.42,
-    // strongly suppress it from reaching synthesis.
-    if (highSignalTokens.length > 0 && sLexical === 0 && sSemantic < 0.42) {
+    // If an article contains 0 lexical overlap with high-signal query tokens, 0 entity overlap,
+    // and semantic similarity < 0.65, strongly suppress it from reaching synthesis.
+    if (highSignalTokens.length > 0 && sLexical === 0 && sEntity === 0 && sSemantic < 0.65) {
       continue;
     }
 
@@ -372,6 +406,7 @@ export async function retrieveHybridContext({
         ...art,
         compositeScore,
         sLexical,
+        sTitle,
         sSemantic,
       });
     }
@@ -388,20 +423,22 @@ export async function retrieveHybridContext({
 
     const sSemantic = typeof ev.similarity === 'number' ? Math.max(0, Math.min(1, ev.similarity)) : 0.5;
     const sLexical = computeTokenOverlap(highSignalTokens, eventCorpus);
+    const sTitle = computeTokenOverlap(highSignalTokens, ev.title);
     const sEntity = computeTokenOverlap(targetEntities.map(e => e.toLowerCase()), eventCorpus);
     const sGraph = ev.sourceChannel === 'graph_traversal' || ev.sourceChannel === 'event_family' ? 1.0 : 0.0;
     const sTemporal = computeTemporalScore(ev.last_updated_at, temporalIntent);
     const sSource = (ev.source_count || 1) >= 2 ? 0.9 : 0.6;
 
+    const effectiveLexical = sTitle > 0 ? (0.5 * sLexical + 0.5 * sTitle) : (0.7 * sLexical);
     const compositeScore =
       weights.semantic * sSemantic +
-      weights.lexical * sLexical +
+      weights.lexical * effectiveLexical +
       weights.entity * sEntity +
       weights.graph * sGraph +
       weights.temporal * sTemporal +
       weights.sourceReliability * sSource;
 
-    if (highSignalTokens.length > 0 && sLexical === 0 && sSemantic < 0.42) {
+    if (highSignalTokens.length > 0 && sLexical === 0 && sEntity === 0 && sSemantic < 0.65) {
       continue;
     }
 

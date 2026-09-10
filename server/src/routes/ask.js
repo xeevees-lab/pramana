@@ -217,6 +217,7 @@ export default async function askRoutes(app) {
         url,
         userId: request.user?.id || null,
         topicContext: activeTopicContext,
+        pageContext: request.body?.pageContext || null,
       });
 
       // If authenticated, persist assistant response and update conversation state

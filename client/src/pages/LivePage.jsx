@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 
@@ -17,24 +17,71 @@ function formatDate(dateString) {
 export default function LivePage() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshStatus, setRefreshStatus] = useState(null);
 
-  const fetchLive = () => {
+  // Prevent duplicate rapid clicks
+  const refreshInFlight = useRef(false);
+
+  const fetchLive = useCallback((isManualRefresh = false) => {
+    if (isManualRefresh) {
+      if (refreshInFlight.current) return; // Prevent duplicate
+      refreshInFlight.current = true;
+      setIsRefreshing(true);
+      setRefreshStatus(null);
+    }
+
     api.get('/events/live?limit=50')
       .then(data => {
-        setEntries(data.entries || []);
+        const newEntries = data.entries || [];
+
+        if (isManualRefresh) {
+          // Merge with deduplication by entry ID
+          setEntries(prev => {
+            const existingIds = new Set(prev.map(e => e.id));
+            const freshEntries = newEntries.filter(e => !existingIds.has(e.id));
+            const merged = [...freshEntries, ...prev];
+            // Sort by created_at descending
+            merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (freshEntries.length > 0) {
+              setRefreshStatus(`${freshEntries.length} new update(s) found`);
+            } else {
+              setRefreshStatus('Feed refreshed — no new reports available');
+            }
+
+            return merged;
+          });
+        } else {
+          setEntries(newEntries);
+        }
+
+        setLastUpdated(new Date());
         setLoading(false);
       })
       .catch(err => {
         console.error('Failed to load live wire:', err);
+        if (isManualRefresh) {
+          setRefreshStatus('Refresh failed — please try again');
+        }
         setLoading(false);
+      })
+      .finally(() => {
+        if (isManualRefresh) {
+          setIsRefreshing(false);
+          refreshInFlight.current = false;
+          // Auto-clear status message after 5 seconds
+          setTimeout(() => setRefreshStatus(null), 5000);
+        }
       });
-  };
+  }, []);
 
   useEffect(() => {
     fetchLive();
-    const timer = setInterval(fetchLive, 10000); // 10s auto-refresh
+    const timer = setInterval(() => fetchLive(false), 10000); // 10s auto-refresh
     return () => clearInterval(timer);
-  }, []);
+  }, [fetchLive]);
 
   return (
     <div style={{ maxWidth: '840px', margin: '0 auto' }}>
@@ -46,15 +93,54 @@ export default function LivePage() {
           <p className="page-subtitle" style={{ marginBottom: 0 }}>
             Real-time feed of newly detected events, breaking developments, and verified reporting.
           </p>
+          {/* Honest last-updated timestamp */}
+          {lastUpdated && (
+            <div style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-ink-tertiary)',
+              marginTop: '4px',
+              fontFeatureSettings: '"tnum"',
+            }}>
+              Last updated: {formatTime(lastUpdated.toISOString())} {formatDate(lastUpdated.toISOString())}
+            </div>
+          )}
         </div>
-        <button
-          type="button"
-          className="btn btn--secondary"
-          onClick={fetchLive}
-          style={{ fontSize: 'var(--text-xs)' }}
-        >
-          ↻ Refresh Now
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => fetchLive(true)}
+            disabled={isRefreshing}
+            style={{
+              fontSize: 'var(--text-xs)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              opacity: isRefreshing ? 0.7 : 1,
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <span style={{
+              display: 'inline-block',
+              animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+            }}>
+              ↻
+            </span>
+            {isRefreshing ? 'Refreshing...' : 'Refresh Now'}
+          </button>
+          {/* Refresh status message */}
+          {refreshStatus && (
+            <div style={{
+              fontSize: 'var(--text-xs)',
+              color: refreshStatus.includes('failed')
+                ? 'var(--color-error, #DC2626)'
+                : 'var(--color-accent, #7C3AED)',
+              fontWeight: 500,
+            }}>
+              {refreshStatus}
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -126,6 +212,14 @@ export default function LivePage() {
           ))}
         </div>
       )}
+
+      {/* Spin animation for refresh icon */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

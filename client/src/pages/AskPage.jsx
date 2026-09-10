@@ -437,6 +437,20 @@ export default function AskPage() {
                       <span className="ask-workspace__provenance-tag">
                         ● {msg.provenance || 'NEWS REPORTING'}
                       </span>
+                      {msg.accessState && msg.accessState !== 'DIRECT_QUERY' && (
+                        <span style={{
+                          fontSize: '0.6875rem',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: '#EEF2FF',
+                          color: '#4F46E5',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.03em',
+                        }}>
+                          {msg.accessState.replace(/_/g, ' ')}
+                        </span>
+                      )}
                       <span style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'capitalize' }}>
                         Mode: {msg.mode ? msg.mode.replace('_', ' ') : 'ask'}
                       </span>
@@ -541,30 +555,81 @@ export default function AskPage() {
                         <div className="ask-workspace__claims-grid">
                           {msg.claims.map((claim, cIdx) => (
                             <div key={cIdx} className="ask-workspace__claim-item">
+                              {/* Dimension 1: VERIFICATION STATUS — top-level badge */}
                               <div className="ask-workspace__claim-meta">
-                                <span
-                                  className={`badge ${
-                                    claim.status === 'VERIFIED'
-                                      ? 'badge--verified'
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span
+                                      className={`badge ${
+                                        claim.status === 'VERIFIED'
+                                          ? 'badge--verified'
+                                          : claim.status === 'CONTRADICTED'
+                                          ? 'badge--contradicted'
+                                          : 'badge--unverified'
+                                      }`}
+                                    >
+                                      {claim.badgeLabel || claim.status}
+                                    </span>
+                                    {claim.independentSourceCount > 0 && (
+                                      <span style={{ fontSize: '0.6875rem', color: '#6B7280' }}>
+                                        {claim.independentSourceCount} indep. outlet(s)
+                                      </span>
+                                    )}
+                                  </div>
+                                  {/* Explanatory subtext for verification status */}
+                                  <span style={{ fontSize: '0.625rem', color: '#9CA3AF', lineHeight: 1.3, marginTop: '1px' }}>
+                                    {claim.status === 'VERIFIED'
+                                      ? 'Corroborated by independent reporting'
                                       : claim.status === 'CONTRADICTED'
-                                      ? 'badge--contradicted'
-                                      : 'badge--unverified'
-                                  }`}
-                                >
-                                  {claim.badgeLabel || claim.status}
-                                </span>
-                                {claim.independentSourceCount > 0 && (
-                                  <span style={{ fontSize: '0.6875rem', color: '#6B7280' }}>
-                                    {claim.independentSourceCount} indep. outlet(s)
+                                      ? 'Contradicted by identified source(s)'
+                                      : 'Insufficient independent evidence to verify'}
                                   </span>
-                                )}
+                                </div>
                               </div>
+
+                              {/* Claim text */}
                               <p className="ask-workspace__claim-text">
                                 &ldquo;{claim.text}&rdquo;
                               </p>
+
+                              {/* Detailed explanation */}
                               {claim.explanation && (
                                 <div style={{ fontSize: '0.6875rem', color: '#6B7280', marginTop: '4px' }}>
                                   {claim.explanation}
+                                </div>
+                              )}
+
+                              {/* Dimension 2: CLAIM TYPE — separate visual group */}
+                              {claim.claimType && (
+                                <div style={{
+                                  marginTop: '6px',
+                                  paddingTop: '6px',
+                                  borderTop: '1px solid #F3F4F6',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}>
+                                  <span style={{
+                                    fontSize: '0.625rem',
+                                    fontWeight: 600,
+                                    color: '#9CA3AF',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.03em',
+                                  }}>
+                                    Claim Type:
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.6875rem',
+                                    color: '#6D28D9',
+                                    background: '#F5F3FF',
+                                    padding: '1px 6px',
+                                    borderRadius: '3px',
+                                    border: '1px solid #EDE9FE',
+                                    fontWeight: 500,
+                                    textTransform: 'capitalize',
+                                  }}>
+                                    {(claim.claimType || 'factual').replace(/_/g, ' ')} assertion
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -622,7 +687,7 @@ export default function AskPage() {
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="ask-workspace__sources-section">
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280' }}>
-                          Corroborating Dispatches ({msg.sources.length}):
+                          Key Evidence Sources ({msg.sources.length}):
                         </span>
                         <div className="ask-workspace__sources-pills">
                           {msg.sources.map((src, sIdx) => (
@@ -634,10 +699,33 @@ export default function AskPage() {
                               className="ask-workspace__source-pill"
                             >
                               <span>📰</span>
-                              <strong>{src.name}</strong>: {src.title ? src.title.slice(0, 50) + '...' : 'Report'}
+                              <strong>{src.name || src.publisher}</strong>: {src.headline || src.title ? (src.headline || src.title).slice(0, 50) + '...' : 'Report'}
                             </a>
                           ))}
                         </div>
+
+                        {/* Collapsible Additional Sources */}
+                        {msg.moreSources && msg.moreSources.length > 0 && (
+                          <details style={{ marginTop: '8px' }}>
+                            <summary style={{ fontSize: '0.75rem', color: '#6B7280', cursor: 'pointer', userSelect: 'none', padding: '2px 0' }}>
+                              + {msg.moreSources.length} additional corroborated sources
+                            </summary>
+                            <div className="ask-workspace__sources-pills" style={{ marginTop: '6px' }}>
+                              {msg.moreSources.map((src, mIdx) => (
+                                <a
+                                  key={mIdx}
+                                  href={src.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ask-workspace__source-pill"
+                                >
+                                  <span>📰</span>
+                                  <strong>{src.name || src.publisher}</strong>: {src.headline || src.title ? (src.headline || src.title).slice(0, 50) + '...' : 'Report'}
+                                </a>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                   </div>

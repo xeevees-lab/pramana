@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import '../../styles/floating-intelligence.css';
@@ -7,6 +7,12 @@ import '../../styles/floating-intelligence.css';
  * Global Floating Intelligence Assistant
  * Provides rapid grounded queries from any page using the exact same
  * research intelligence pipeline as the full /ask workspace.
+ *
+ * CRITICAL CORRECTNESS REQUIREMENTS:
+ * - Request sequence protection: out-of-order responses are discarded.
+ * - Direct parameter passing: suggestion chips pass query text directly, never through stale closure.
+ * - Page context never overrides explicit user query.
+ * - Each query starts fresh (no cross-conversation contamination).
  */
 export default function FloatingIntelligence() {
   const location = useLocation();
@@ -20,6 +26,8 @@ export default function FloatingIntelligence() {
 
   const panelRef = useRef(null);
   const inputRef = useRef(null);
+  // Request sequence ID to prevent out-of-order response overwrites
+  const requestIdRef = useRef(0);
 
   // Hide floating widget if user is already on the dedicated /ask workspace
   const isAskPage = location.pathname.startsWith('/ask');
@@ -46,25 +54,59 @@ export default function FloatingIntelligence() {
     return null;
   }
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    const cleanQuery = query.trim();
+  /**
+   * Execute search with an EXPLICIT query parameter.
+   * This eliminates the stale closure bug where suggestion chips would
+   * call setQuery() then setTimeout(handleSearch, 50) and read old state.
+   *
+   * @param {Event|null} e - Form submit event, or null for programmatic calls
+   * @param {string} [explicitQuery] - Direct query text (bypasses React state)
+   */
+  const handleSearch = async (e, explicitQuery = null) => {
+    if (e) e.preventDefault();
+
+    // Use explicit parameter if provided, otherwise read current state
+    const cleanQuery = (explicitQuery || query).trim();
     if (!cleanQuery || loading) return;
 
+    // Assign a unique request ID BEFORE clearing state
+    const thisRequestId = ++requestIdRef.current;
+
+    // Clear previous results immediately to avoid showing stale data
     setLoading(true);
     setError(null);
+    setResult(null);
+
+    // Also update the input to reflect the explicit query (for chips)
+    if (explicitQuery) {
+      setQuery(explicitQuery);
+    }
 
     try {
       // Calls the EXACT same research intelligence pipeline as /ask
+      // No page context, no conversation ID — pure explicit user query
       const data = await api.post('/ask/query', {
         query: cleanQuery,
         mode: 'ask',
       });
+
+      // CRITICAL: Discard response if a newer request was sent while this one was in flight
+      if (requestIdRef.current !== thisRequestId) {
+        console.log('[FloatingIntelligence] Discarding stale response for request', thisRequestId);
+        return;
+      }
+
       setResult(data);
     } catch (err) {
-      setError(err.message || 'Unable to retrieve research briefing. Please try again.');
+      // Only set error if this is still the current request
+      if (requestIdRef.current === thisRequestId) {
+        setError(err.message || 'Unable to retrieve research briefing. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      // Only clear loading if this is still the current request
+      if (requestIdRef.current === thisRequestId) {
+        setLoading(false);
+      }
     }
   };
 
@@ -81,7 +123,7 @@ export default function FloatingIntelligence() {
 
   return (
     <div className="floating-assistant" role="complementary" aria-label="Quick Intelligence Assistant">
-      {/* Trigger Button */}
+      {/* Trigger Button — compact icon, not a large pill */}
       {!isOpen && (
         <button
           type="button"
@@ -89,9 +131,9 @@ export default function FloatingIntelligence() {
           onClick={() => setIsOpen(true)}
           aria-expanded={false}
           title="Open Pramāṇa Quick Intelligence"
+          aria-label="Open Pramāṇa Quick Intelligence"
         >
           <span className="floating-assistant__trigger-icon">◇</span>
-          <span className="floating-assistant__trigger-label">Ask Pramāṇa</span>
         </button>
       )}
 
@@ -121,7 +163,7 @@ export default function FloatingIntelligence() {
           {/* Body */}
           <div className="floating-assistant__body">
             {/* Input form */}
-            <form className="floating-assistant__form" onSubmit={handleSearch}>
+            <form className="floating-assistant__form" onSubmit={(e) => handleSearch(e)}>
               <div className="floating-assistant__input-wrapper">
                 <input
                   ref={inputRef}
@@ -166,20 +208,14 @@ export default function FloatingIntelligence() {
                     <button
                       type="button"
                       className="floating-assistant__suggestion-chip"
-                      onClick={() => {
-                        setQuery('What happened with the Nepal floods?');
-                        setTimeout(() => handleSearch(), 50);
-                      }}
+                      onClick={() => handleSearch(null, 'What happened with the Nepal floods?')}
                     >
                       Nepal floods status
                     </button>
                     <button
                       type="button"
                       className="floating-assistant__suggestion-chip"
-                      onClick={() => {
-                        setQuery('European unity report findings');
-                        setTimeout(() => handleSearch(), 50);
-                      }}
+                      onClick={() => handleSearch(null, 'European unity report findings')}
                     >
                       European unity report
                     </button>
@@ -238,7 +274,7 @@ export default function FloatingIntelligence() {
                             rel="noopener noreferrer"
                             className="floating-assistant__source-item"
                           >
-                            📰 {src.name}
+                            📰 {src.name || src.publisher}
                           </a>
                         ))}
                       </div>

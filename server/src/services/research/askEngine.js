@@ -11,6 +11,65 @@ import { getGeminiClient, isGeminiConfigured } from '../gemini.js';
 import { query } from '../../db/pool.js';
 
 /**
+ * Evaluates candidate verified claims against the user's explicit query
+ * to ensure that only directly relevant verified assertions are selected as
+ * the "Verified Picture", preventing unrelated high-confidence claims from
+ * contaminating answers.
+ *
+ * @param {string} userQuery
+ * @param {Array<object>} claims
+ * @returns {object|null} The most relevant verified claim, or null if no claim passes relevance threshold.
+ */
+export function getQueryRelevantVerifiedPicture(userQuery, claims = []) {
+  if (!userQuery || !Array.isArray(claims) || claims.length === 0) {
+    return null;
+  }
+
+  const stopWords = new Set([
+    'what', 'when', 'where', 'which', 'who', 'whom', 'this', 'that', 'with', 'from',
+    'have', 'has', 'had', 'were', 'been', 'about', 'latest', 'news', 'update',
+    'updates', 'report', 'reports', 'findings', 'explain', 'detail', 'details'
+  ]);
+
+  const queryTokens = userQuery
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 3 && !stopWords.has(t));
+
+  if (queryTokens.length === 0) {
+    return null;
+  }
+
+  const verified = claims.filter(c => (c.verification_status === 'VERIFIED' || c.status === 'VERIFIED'));
+  if (verified.length === 0) {
+    return null;
+  }
+
+  let bestClaim = null;
+  let highestScore = 0;
+
+  for (const claim of verified) {
+    const text = (claim.content || claim.text || '').toLowerCase();
+    let matches = 0;
+    for (const token of queryTokens) {
+      if (text.includes(token)) {
+        matches++;
+      }
+    }
+
+    const matchRatio = matches / queryTokens.length;
+    // Require at least 40% keyword match or at least 2 distinct significant keyword matches
+    if ((matchRatio >= 0.4 || matches >= 2) && matches > highestScore) {
+      highestScore = matches;
+      bestClaim = claim;
+    }
+  }
+
+  return bestClaim;
+}
+
+/**
  * Process a research or fact-checking inquiry through the complete
  * Two-Stage Pramāṇa Research Intelligence Brain.
  *
@@ -21,6 +80,7 @@ import { query } from '../../db/pool.js';
  * @param {string} [params.url] - Optional article or video URL to inspect
  * @param {string} [params.userId] - Authenticated user ID (if logged in)
  * @param {object} [params.topicContext={}] - Persisted conversation topic context for follow-up questions
+ * @param {string|object} [params.pageContext=null] - Page context (explicit query always has priority)
  * @returns {Promise<object>} Structured intelligence response
  */
 export async function processResearchQuery({
@@ -30,9 +90,17 @@ export async function processResearchQuery({
   url = null,
   userId = null,
   topicContext = {},
+  pageContext = null,
 } = {}) {
   let effectiveQuery = (userQuery || '').trim();
   let targetUrl = (url || '').trim();
+
+  // EXPLICIT QUERY PRECEDENCE:
+  // User's explicit query always takes precedence over pageContext.
+  // If userQuery is empty, fallback to pageContext if provided.
+  if (!effectiveQuery && pageContext) {
+    effectiveQuery = typeof pageContext === 'string' ? pageContext : (pageContext.title || '');
+  }
 
   // If query is an embedded URL, parse it
   if (!targetUrl && (effectiveQuery.startsWith('http://') || effectiveQuery.startsWith('https://'))) {
@@ -80,14 +148,50 @@ export async function processResearchQuery({
     supportedHypotheses,
     temporalIntent,
     eventFamily,
+    expansion,
   } = retrievalResult;
 
-  const topEvent = events[0] || null;
+  const queryHighSignalTokens = expansion?.highSignalTokens || [];
+
+  // Helper to verify if an item actually pertains to the query topic (prevents nearest-event substitution)
+  const isItemRelevantToQuery = (item) => {
+    if (!item) return false;
+    const corpus = `${item.title} ${item.summary || ''}`.toLowerCase();
+    if (queryHighSignalTokens.length === 0) return true;
+
+    let matches = 0;
+    for (const token of queryHighSignalTokens) {
+      if (token.length <= 3) {
+        if (new RegExp(`\\b${token}\\b`, 'i').test(corpus)) {
+          matches++;
+        }
+      } else {
+        const stem = token.endsWith('ing') && token.length > 5 ? token.slice(0, -3)
+          : token.endsWith('es') && token.length > 4 ? token.slice(0, -2)
+          : token.endsWith('s') && token.length > 3 ? token.slice(0, -1)
+          : token.endsWith('y') && token.length > 4 ? token.slice(0, -1)
+          : token.endsWith('an') && token.length > 4 ? token.slice(0, -2)
+          : token;
+        if (corpus.includes(token) || (stem && corpus.includes(stem))) {
+          matches++;
+        }
+      }
+    }
+
+    const matchRatio = matches / queryHighSignalTokens.length;
+    if (queryHighSignalTokens.length === 1) return matches >= 1;
+    if (queryHighSignalTokens.length === 2) return matches === 2;
+    return matches >= 2 && matchRatio >= 0.5;
+  };
+
+  const relevantEvents = events.filter(isItemRelevantToQuery);
+  const relevantArticles = articles.filter(isItemRelevantToQuery);
+  const topEvent = relevantEvents[0] || null;
 
   // 2. Causal Chain & Temporal Milestones
   const causalChain = await assembleCausalChain({
     event: topEvent,
-    articles,
+    articles: relevantArticles.length > 0 ? relevantArticles : articles,
     claims: dbClaims,
     existingCausalLinks: causalLinks,
     skipLlm: true,
@@ -129,7 +233,7 @@ export async function processResearchQuery({
         explanation: v.explanation,
       });
     }
-  } else if (effectiveQuery) {
+  } else if (mode === 'fact_check' && effectiveQuery) {
     const v = verifyClaim({ text: effectiveQuery }, articles);
     verifiedClaims.push({
       id: 'claim-custom',
@@ -147,6 +251,7 @@ export async function processResearchQuery({
 
   // 6. Fact Check Mode Return
   if (mode === 'fact_check') {
+    const relevantVp = getQueryRelevantVerifiedPicture(effectiveQuery, verifiedClaims);
     const verifiedCount = verifiedClaims.filter(c => c.status === 'VERIFIED').length;
     const answerSummary = verifiedClaims.length > 0
       ? `Audit completed across ${articles.length} corroborating dispatch(es). Established ${verifiedCount} verified assertion(s) with wire-syndication de-duplication.`
@@ -158,7 +263,7 @@ export async function processResearchQuery({
       targetUrl,
       answer: answerSummary,
       executiveSummary: answerSummary,
-      theVerifiedPicture: verifiedClaims.find(c => c.status === 'VERIFIED')?.text || null,
+      theVerifiedPicture: relevantVp ? (relevantVp.text || relevantVp.content) : null,
       provenance: 'NEWS REPORTING',
       accessState: videoAnalysis ? 'METADATA_ONLY' : (urlAnalysis ? 'FULL_CONTENT_ANALYZED' : 'DIRECT_QUERY'),
       claims: verifiedClaims,
@@ -166,7 +271,7 @@ export async function processResearchQuery({
       events,
       causalChain,
       timeline,
-      mlForecast,
+      mlForecast: mlForecast?.status === 'FORECAST_PRODUCED' ? mlForecast : { status: 'NO_FORECAST_JUSTIFIED', modelVersion: 'pramana-calibrated-logreg-v1.2' },
       eventFamily,
       videoNote: videoAnalysis?.note || null,
       sources: articles.map(a => ({
@@ -194,7 +299,7 @@ export async function processResearchQuery({
         `${m.role.toUpperCase()}: ${m.content}`
       ).join('\n');
 
-      const eventsSummary = events.slice(0, 3).map(e =>
+      const eventsSummary = relevantEvents.slice(0, 3).map(e =>
         `Event: ${e.title} (${e.category}) | Status: ${e.status} | Severity: ${e.severity}\nSummary: ${e.summary}`
       ).join('\n\n');
 
@@ -218,7 +323,38 @@ export async function processResearchQuery({
         urlContext = `\nRetrieved Public Video Metadata (${videoAnalysis.url}):\nTitle: ${videoAnalysis.title}\nChannel: ${videoAnalysis.author}\nNote: ${videoAnalysis.note}`;
       }
 
-      const prompt = `You are Pramāṇa's lead news research intelligence analyst.
+      const isAskMode = mode === 'ask';
+      const prompt = isAskMode
+        ? `You are Pramāṇa's direct, conversational news intelligence analyst.
+Synthesize a concise, direct, evidence-grounded answer (1 to 2 clear paragraphs) answering the user's inquiry based STRICTLY on the corroborated evidence below.
+
+CRITICAL INSTRUCTIONS:
+1. Ground truth only: Do NOT invent facts, statistics, or details not present in the snippets.
+2. Direct conversational answer first: Answer the question clearly and immediately. Do not dump references or repeat the user's query.
+3. No markdown headings: DO NOT use markdown headers (no "###", no "**Title:**").
+4. Objectivity: Objective, grounded news intelligence tone.
+
+Conversation History:
+${historyContext || 'None'}
+
+User Inquiry:
+${effectiveQuery}
+
+Verified Events in System:
+${eventsSummary || 'No direct event match.'}
+
+Corroborated Reporting:
+${articlesSummary || 'No matching dispatches.'}
+
+Evaluated Claims:
+${claimsSummary || 'None extracted.'}
+
+Corroborated Search Hypotheses:
+${supportedHypothesesText}
+${urlContext}
+
+Answer:`
+        : `You are Pramāṇa's lead news research intelligence analyst.
 Synthesize an evidence-grounded research intelligence summary answering the user's inquiry based STRICTLY on the corroborated evidence below.
 
 CRITICAL INSTRUCTIONS:
@@ -258,7 +394,7 @@ Research Summary:`;
           contents: prompt,
         });
         const timeoutPromise = new Promise((_, rej) =>
-          setTimeout(() => rej(new Error('Ask synthesis timeout')), 3500)
+          setTimeout(() => rej(new Error('Ask synthesis timeout')), 6000)
         );
         const response = await Promise.race([callPromise, timeoutPromise]);
         executiveSummary = response.text.trim().replace(/^###\s+/gm, '').replace(/\*\*/g, '');
@@ -271,41 +407,64 @@ Research Summary:`;
 
   // 8. Deterministic Fallback if LLM unavailable or timed out
   if (!executiveSummary) {
-    if (events.length > 0) {
-      const ev = events[0];
-      theVerifiedPicture = verifiedClaims.find(c => c.status === 'VERIFIED')?.text || ev.summary;
-      executiveSummary = `${ev.summary} This situation is tracked across ${ev.source_count || 1} independent source(s) and ${ev.article_count || 1} recorded dispatch(es).`;
-    } else if (articles.length > 0) {
-      executiveSummary = `Corroborated reporting from independent sources confirms coverage on this topic, led by reports such as "${articles[0].title}" from ${articles[0].source_name || 'News Source'}.`;
+    if (relevantEvents.length > 0) {
+      const ev = relevantEvents[0];
+      executiveSummary = mode === 'ask'
+        ? `${ev.summary} (${ev.source_count || 1} corroborated source(s)).`
+        : `${ev.summary} This situation is tracked across ${ev.source_count || 1} independent source(s) and ${ev.article_count || 1} recorded dispatch(es).`;
+    } else if (relevantArticles.length > 0) {
+      executiveSummary = mode === 'ask'
+        ? `Reports indicate that "${relevantArticles[0].title}" (${relevantArticles[0].source_name || 'News Source'}).`
+        : `Corroborated reporting from independent sources confirms coverage on this topic, led by reports such as "${relevantArticles[0].title}" from ${relevantArticles[0].source_name || 'News Source'}.`;
     } else {
       executiveSummary = `No independent corroborated reports or living events currently document "${effectiveQuery}". You can monitor the Live Wire as fresh dispatches are ingested.`;
     }
   }
 
-  if (!theVerifiedPicture) {
-    theVerifiedPicture = verifiedClaims.find(c => c.status === 'VERIFIED')?.text || (events[0]?.summary ? events[0].summary.slice(0, 180) : executiveSummary.slice(0, 180));
-  }
+  const relevantVp = getQueryRelevantVerifiedPicture(effectiveQuery, verifiedClaims);
+  theVerifiedPicture = relevantVp
+    ? (relevantVp.text || relevantVp.content)
+    : (topEvent?.summary ? topEvent.summary.slice(0, 180) : executiveSummary.slice(0, 180));
 
   // 9. Construct First-Class Current Status vs Recent Event Object
   const isHistorical = temporalIntent === 'HISTORICAL';
-  const primaryEvent = events[0] || null;
+  const primaryEvent = topEvent;
   const hasActiveEvent = !isHistorical && primaryEvent && (primaryEvent.status === 'developing' || primaryEvent.status === 'ongoing');
   const currentStatus = {
     isActive: Boolean(hasActiveEvent),
     headline: hasActiveEvent
       ? 'Active Living Event'
-      : (events.length > 0 ? (isHistorical ? 'Historical Record' : 'Concluded / Recent Event') : 'No Active Alert'),
+      : (primaryEvent ? (isHistorical ? 'Historical Record' : 'Concluded / Recent Event') : 'No Active Alert'),
     description: hasActiveEvent
       ? `An active emergency is currently tracked across ${primaryEvent.source_count || 1} independent sources.`
-      : (events.length > 0
+      : (primaryEvent
           ? `Reporting documents a notable event (${primaryEvent.title}), though no active emergency alert is currently in effect.`
           : 'No corroborated emergency or ongoing alert is currently detected in latest dispatches.'),
   };
 
-  // Determine evidence state
-  const evidenceState = (articles.length > 0 || events.length > 0)
+  // Determine evidence state strictly based on relevant items
+  const hasRelevantItems = relevantArticles.length > 0 || relevantEvents.length > 0;
+  const evidenceState = hasRelevantItems
     ? 'CORROBORATED'
     : (temporalIntent === 'CURRENT_STATUS' ? 'CURRENT_ACTIVITY_NOT_FOUND' : 'NO_RELEVANT_EVIDENCE_FOUND');
+
+  // If no items were relevant, do not display distractor sources
+  const targetArticles = relevantArticles.length > 0
+    ? relevantArticles
+    : (relevantEvents.length > 0 ? articles : []);
+
+  const allFormattedSources = targetArticles.map(a => ({
+    id: a.id,
+    headline: a.title,
+    title: a.title,
+    publisher: a.source_name || 'News Source',
+    name: a.source_name || 'News Source',
+    publishedAt: a.published_at,
+    excerpt: a.summary || (a.content ? a.content.slice(0, 180) + '...' : ''),
+    reliabilityScore: a.reliability_score ? Math.round(a.reliability_score * 100) : 50,
+    wireService: a.wire_service || null,
+    url: a.url,
+  }));
 
   return {
     mode,
@@ -322,27 +481,18 @@ Research Summary:`;
     provenance,
     accessState: videoAnalysis ? 'METADATA_ONLY' : (urlAnalysis ? 'FULL_CONTENT_ANALYZED' : 'DIRECT_QUERY'),
     claims: verifiedClaims,
-    articles,
-    events,
+    articles: targetArticles,
+    events: relevantEvents,
     entities,
     graphContext,
-    causalChain,
+    causalChain: causalChain || [],
     timeline,
     narrativeReport,
-    mlForecast: mlForecast?.status === 'FORECAST_PRODUCED' ? mlForecast : { status: 'NO_FORECAST_JUSTIFIED' },
+    mlForecast: mlForecast?.status === 'FORECAST_PRODUCED' ? mlForecast : { status: 'NO_FORECAST_JUSTIFIED', modelVersion: 'pramana-calibrated-logreg-v1.2' },
     eventFamily,
     videoNote: videoAnalysis?.note || null,
-    sources: articles.map(a => ({
-      id: a.id,
-      headline: a.title,
-      title: a.title,
-      publisher: a.source_name || 'News Source',
-      name: a.source_name || 'News Source',
-      publishedAt: a.published_at,
-      excerpt: a.summary || (a.content ? a.content.slice(0, 180) + '...' : ''),
-      reliabilityScore: a.reliability_score ? Math.round(a.reliability_score * 100) : 50,
-      wireService: a.wire_service || null,
-      url: a.url,
-    })),
+    sources: allFormattedSources.slice(0, 4),
+    allSources: allFormattedSources,
+    moreSources: allFormattedSources.slice(4),
   };
 }

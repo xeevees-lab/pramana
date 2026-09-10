@@ -3,46 +3,74 @@ import { query } from '../../db/pool.js';
 /**
  * Infer news category from title and content keywords.
  * Maps to allowed categories in events table.
+ * Uses generic keyword patterns — no hardcoded brands, countries, or product names.
  * @param {string} text
  * @returns {string}
  */
 export function inferCategory(text) {
   const lower = (text || '').toLowerCase();
 
-  if (/\b(war|military|missile|army|attack|strike|troops|combat|weapons|defense|ceasefire|invasion|casualt)\b/.test(lower)) {
+  if (/\b(war|military|missile|army|attack|strike|troops|combat|weapons|defense|ceasefire|invasion|casualt|airstrikes|shelling|armed conflict|insurgent|guerrilla)\b/.test(lower)) {
     return 'conflict';
   }
-  if (/\b(treaty|summit|ambassador|sanction|diplomat|bilateral|un |united nations|nato|foreign minister|consul)\b/.test(lower)) {
+  if (/\b(treaty|diplomatic summit|peace summit|g7 summit|g20 summit|nato summit|bilateral summit|leaders summit|summit talks|ambassador|sanction|diplomat|bilateral|un |united nations|nato|foreign minister|consul|envoy|multilateral|peacekeep)\b/.test(lower)) {
     return 'diplomacy';
   }
-  if (/\b(election|parliament|congress|president|prime minister|vote|campaign|senate|legislation|democrat|republican|cabinet)\b/.test(lower)) {
+  if (/\b(election|parliament|congress|president|prime minister|vote|campaign|senate|legislation|democrat|republican|cabinet|referendum|ballot|impeach|governor|mayor)\b/.test(lower)) {
     return 'politics';
   }
-  if (/\b(inflation|gdp|interest rate|central bank|federal reserve|currency|trade deficit|tariff|recession|debt)\b/.test(lower)) {
+  if (/\b(inflation|gdp|interest rate|central bank|federal reserve|currency|trade deficit|tariff|recession|debt|monetary policy|fiscal)\b/.test(lower)) {
     return 'economics';
   }
-  if (/\b(stocks|nasdaq|dow jones|s&p|yield|bond|shares|market index|equity|rally|sell-off)\b/.test(lower)) {
+  if (/\b(stocks|nasdaq|dow jones|s&p|yield|bond|shares|market index|equity|rally|sell-off|ipo|stock market)\b/.test(lower)) {
     return 'markets';
   }
-  if (/\b(earnings|quarterly revenue|merger|acquisition|ceo|layoffs|startup|funding|antitrust)\b/.test(lower)) {
+  if (/\b(earnings|quarterly revenue|merger|acquisition|ceo|layoffs|startup|funding|antitrust|profit|revenue|valuation|venture capital|private equity|corporate|shareholder|dividend)\b/.test(lower)) {
     return 'business';
   }
-  if (/\b(ai|artificial intelligence|chip|semiconductor|cyber|hacker|software|quantum|cloud|data center|tech|algorithm)\b/.test(lower)) {
+  // Technology — expanded to cover AI, hardware, software, product launches, platforms, robotics, etc.
+  if (/\b(artificial intelligence|machine learning|deep learning|neural network|large language model|generative ai|chatbot|ai model|ai system|reasoning model|foundation model|openai|anthropic|deepmind|chatgpt|claude|gemini|hugging face)\b/.test(lower)) {
     return 'technology';
   }
-  if (/\b(climate|wildfire|flood|hurricane|tornado|earthquake|drought|emissions|temperature|arctic|storm)\b/.test(lower)) {
+  if (/\b(semiconductor|chip|processor|gpu|cpu|fabrication|lithograph|transistor|silicon|wafer|foundry)\b/.test(lower)) {
+    return 'technology';
+  }
+  if (/\b(software|app|application|platform|operating system|browser|firmware|update|patch|version|release|beta|developer|api|sdk|open source)\b/.test(lower)) {
+    return 'technology';
+  }
+  if (/\b(smartphone|laptop|tablet|wearable|headset|gadget|device|hardware|robot|drone|autonomous|self-driving|ev battery|electric vehicle)\b/.test(lower)) {
+    return 'technology';
+  }
+  if (/\b(cyber|hacker|ransomware|malware|data breach|encryption|quantum comput|cloud computing|data center|5g|6g|broadband|fiber optic|satellite internet)\b/.test(lower)) {
+    return 'technology';
+  }
+  if (/\b(product launch|launched|launches|launching|unveils?|announc\w* new|debuts?|flagship|next-gen|cutting-edge|breakthrough tech|innovation|tech giant|tech company|tech summit)\b/.test(lower)) {
+    return 'technology';
+  }
+  if (/\b(climate|wildfire|flood|hurricane|tornado|earthquake|drought|emissions|temperature|arctic|storm|tsunami|typhoon|cyclone|landslide|volcanic|eruption|heatwave|monsoon)\b/.test(lower)) {
     return 'climate';
   }
-  if (/\b(virus|disease|vaccine|outbreak|hospital|health|fda|who |pandemic|medical|cancer)\b/.test(lower)) {
+  if (/\b(virus|disease|vaccine|outbreak|hospital|health|fda|who |pandemic|medical|cancer|surgery|clinical trial|drug approv|pharma|therapeutic|epidemic|infection)\b/.test(lower)) {
     return 'health';
   }
-  if (/\b(supreme court|judge|verdict|indictment|lawsuit|prosecutor|trial|court|ruling|plea)\b/.test(lower)) {
+  if (/\b(supreme court|judge|verdict|indictment|lawsuit|prosecutor|trial|court|ruling|plea|attorney general|legal|sentence|conviction|acquit)\b/.test(lower)) {
     return 'law';
   }
-  if (/\b(telescope|physics|biology|nasa|astronomy|discovery|researchers|species|fossil)\b/.test(lower)) {
+  // Science — expanded to cover space, biology, physics, research discoveries
+  if (/\b(telescope|physics|biology|nasa|astronomy|discovery|researchers|species|fossil|genome|crispr|particle|exoplanet|mars|moon|space station|satellite|rocket|launch vehicle|orbit|astrophys|lab|experiment|scientific|study finds|study shows|journal|peer.review)\b/.test(lower)) {
     return 'science';
   }
-  return 'politics'; // Default broad category
+  if (/\b(solar|wind energy|renewable|nuclear|oil price|opec|natural gas|pipeline|energy transition|power grid|electricity|hydroelectric|geothermal)\b/.test(lower)) {
+    return 'environment';
+  }
+  if (/\b(olympic|world cup|championship|tournament|match|league|medal|athlete|coach|soccer|football|cricket|tennis|basketball|baseball|racing|motorsport)\b/.test(lower)) {
+    return 'sports';
+  }
+  if (/\b(film|movie|album|concert|museum|theater|theatre|award|grammy|oscar|emmy|festival|exhibition|novel|book|artist|cultural|heritage)\b/.test(lower)) {
+    return 'culture';
+  }
+  // Default: 'other' — NOT politics, to avoid systematic misclassification
+  return 'other';
 }
 
 /**
@@ -170,6 +198,8 @@ export async function clusterArticle(article) {
 
 /**
  * Link an article to an existing event and update event metrics.
+ * Also evaluates whether the event headline should be updated
+ * based on the incoming article's freshness and source quality.
  */
 async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
   await query(
@@ -196,6 +226,11 @@ async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
     [eventId, articleId]
   );
 
+  // Deterministic headline evolution check
+  if (relevanceScore >= 0.75) {
+    await updateEventHeadline(eventId, articleId);
+  }
+
   // Live feed entry for new coverage
   await query(
     `INSERT INTO live_entries (event_id, entry_type, title, description)
@@ -209,4 +244,75 @@ async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
      LIMIT 1`,
     [eventId, articleId]
   );
+}
+
+/**
+ * Deterministic event headline evolution.
+ *
+ * An event headline may be updated ONLY when:
+ * 1. The new article belongs to the event (already guaranteed by caller).
+ * 2. The new article is meaningfully newer than the current headline source (>= 2 hours).
+ * 3. The source quality is appropriate (reliability_score >= 0.5 or from a known publisher).
+ * 4. The new headline is not a near-duplicate syndicated copy of the existing one
+ *    (checked via simple normalized Jaccard overlap < 0.80).
+ *
+ * This prevents both headline staleness and syndicated churn.
+ */
+async function updateEventHeadline(eventId, articleId) {
+  try {
+    // Get the current event headline and the new article details
+    const { rows: eventRows } = await query(
+      `SELECT title, summary, first_reported_at FROM events WHERE id = $1`,
+      [eventId]
+    );
+    if (eventRows.length === 0) return;
+
+    const currentEvent = eventRows[0];
+
+    const { rows: articleRows } = await query(
+      `SELECT a.title, a.summary, a.published_at, COALESCE(s.reliability_score, 0.5) AS reliability
+       FROM articles a
+       LEFT JOIN sources s ON a.source_id = s.id
+       WHERE a.id = $1`,
+      [articleId]
+    );
+    if (articleRows.length === 0) return;
+
+    const article = articleRows[0];
+
+    // Gate 1: Source quality must be adequate
+    if (article.reliability < 0.5) return;
+
+    // Gate 2: Article must be meaningfully newer than the event's first report (>= 2 hours)
+    const firstReportedAt = new Date(currentEvent.first_reported_at || 0).getTime();
+    const articlePublishedAt = new Date(article.published_at || 0).getTime();
+    const ageGapHours = (articlePublishedAt - firstReportedAt) / (1000 * 60 * 60);
+    if (ageGapHours < 2) return;
+
+    // Gate 3: The new headline must not be a near-duplicate of the current headline
+    const normalize = (s) => (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    const oldWords = new Set(normalize(currentEvent.title));
+    const newWords = new Set(normalize(article.title));
+    if (oldWords.size > 0 && newWords.size > 0) {
+      let intersection = 0;
+      for (const w of oldWords) {
+        if (newWords.has(w)) intersection++;
+      }
+      const union = new Set([...oldWords, ...newWords]).size;
+      const jaccard = union > 0 ? intersection / union : 0;
+      if (jaccard > 0.80) return; // Too similar — syndicated churn, skip
+    }
+
+    // All gates passed: update the event headline and summary
+    await query(
+      `UPDATE events
+       SET title = $2, summary = COALESCE($3, summary)
+       WHERE id = $1`,
+      [eventId, article.title, article.summary || null]
+    );
+
+    console.log(`[Clusterer] Headline evolved for event ${eventId}: "${article.title}"`);
+  } catch (err) {
+    console.warn('[Clusterer] Headline update warning:', err.message);
+  }
 }

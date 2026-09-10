@@ -63,6 +63,57 @@ export const DEFAULT_SOURCES = [
       country: 'us',
     },
   },
+  // Technology coverage
+  {
+    name: 'BBC Technology',
+    type: 'rss',
+    url: 'http://feeds.bbci.co.uk/news/technology/rss.xml',
+    reliability_score: 0.88,
+    enabled: true,
+    config: {},
+  },
+  {
+    name: 'The Guardian Technology',
+    type: 'rss',
+    url: 'https://www.theguardian.com/technology/rss',
+    reliability_score: 0.84,
+    enabled: true,
+    config: {},
+  },
+  // Science coverage
+  {
+    name: 'BBC Science & Environment',
+    type: 'rss',
+    url: 'http://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
+    reliability_score: 0.88,
+    enabled: true,
+    config: {},
+  },
+  {
+    name: 'The Guardian Science',
+    type: 'rss',
+    url: 'https://www.theguardian.com/science/rss',
+    reliability_score: 0.84,
+    enabled: true,
+    config: {},
+  },
+  // Business coverage
+  {
+    name: 'BBC Business',
+    type: 'rss',
+    url: 'http://feeds.bbci.co.uk/news/business/rss.xml',
+    reliability_score: 0.88,
+    enabled: true,
+    config: {},
+  },
+  {
+    name: 'The Guardian Business',
+    type: 'rss',
+    url: 'https://www.theguardian.com/business/rss',
+    reliability_score: 0.84,
+    enabled: true,
+    config: {},
+  },
 ];
 
 /**
