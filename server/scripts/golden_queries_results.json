@@ -1,0 +1,262 @@
+[
+  {
+    "id": 1,
+    "query": "Did Apple launch the M4 MacBook Pro?",
+    "success": true,
+    "elapsed": 12404,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent product-launch or model-release information is available in the current evidence set.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 2,
+    "query": "Did OpenAI release GPT-5?",
+    "success": true,
+    "elapsed": 12058,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent product-launch or model-release information is available in the current evidence set.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 3,
+    "query": "What are the latest AI technology updates?",
+    "success": true,
+    "elapsed": 12130,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent information is available in the current evidence set to answer this inquiry.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 4,
+    "query": "European unity study findings",
+    "success": true,
+    "elapsed": 12469,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent information is available in the current evidence set to answer this inquiry.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 5,
+    "query": "Slain Australian surfers homicide trial facts",
+    "success": true,
+    "elapsed": 11965,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent information is available in the current evidence set to answer this inquiry.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 6,
+    "query": "What caused the floods in Kathmandu Nepal?",
+    "success": true,
+    "elapsed": 1375,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "About 46 people believed to be trapped in ‘room-like’ structure inside hydro plant tunnel on Nepal-Tibet border After the flood: human suffering on an unfathomable scale in Nepal’s worst-hit districts",
+    "keyDevelopments": [
+      {
+        "title": "Two workers pulled alive from tunnel nine days after Nepal-Tibet floods",
+        "date": "2026-09-04",
+        "organization": "The Guardian World",
+        "whatHappened": "Officials say pair were rescued from Trishuli 3A hydropower tunnel in Nepal after being trapped at depth of 170 metres Two people have been pulled out alive from a hydropower tunnel in Nepal nine days after deadly flash floods buried the projects in deep mud and left them trapped. The workers were rescued during an operation at the Trishuli 3A tunnel, a hydropower project in one of the areas worst affected by last week’s floods, according to the army spokesperson Brig Gen Raja Ram Basnet. Con...",
+        "whyItMatters": "Officials say pair were rescued from Trishuli 3A hydropower tunnel in Nepal after being trapped at depth of 170 metres Two people have been ",
+        "url": "https://www.theguardian.com/world/2026/sep/04/nepal-tunnel-found-alive-flood-two-workers-hydropower-rescue",
+        "sourceTier": "HIGH_QUALITY_NEWS"
+      },
+      {
+        "title": "Rescuers in Nepal find two more people alive after flash flood disaster",
+        "date": "2026-09-05",
+        "organization": "The Guardian World",
+        "whatHappened": "Chinese man at Trishuli hydropower project and Nepali woman in Nuwakot found 10 days into rescue operation Emergency responders have rescued a Chinese man and a Nepali woman in two separate operations as authorities continued to search for thousands of people missing 10 days after massive floods hit Nepal. The Nepali military said on Saturday a joint team comprising personnel from its army and South Korean disaster experts rescued the man from a 225-metre (740ft) tunnel in the Upper Trishuli-...",
+        "whyItMatters": "Chinese man at Trishuli hydropower project and Nepali woman in Nuwakot found 10 days into rescue operation Emergency responders have rescued",
+        "url": "https://www.theguardian.com/world/2026/sep/05/rescuers-nepal-find-two-more-people-alive-flood-disaster",
+        "sourceTier": "HIGH_QUALITY_NEWS"
+      },
+      {
+        "title": "Why Nepal is demanding climate justice and compensation after deadly floods",
+        "date": "2026-09-09",
+        "organization": "Al Jazeera English",
+        "whatHappened": "Nepal's politicians have said the country is bearing the brunt for climate change caused by other nations.",
+        "whyItMatters": "Nepal's politicians have said the country is bearing the brunt for climate change caused by other nations.",
+        "url": "https://www.aljazeera.com/news/2026/9/9/why-nepal-is-demanding-climate-justice-and-compensation-after-deadly-floods?traffic_source=rss",
+        "sourceTier": "HIGH_QUALITY_NEWS"
+      },
+      {
+        "title": "Nepal says big polluters must ‘wake up’ as it calls for climate compensation over flood disaster",
+        "date": "2026-09-08",
+        "organization": "The Guardian World",
+        "whatHappened": "Foreign minister Shisir Khanal tells the Guardian the world’s biggest economies need to help Nepal, which contributes less than 0.1% of global greenhouse gas emissions Nepal is demanding $20m in climate compensation for the recent devastating floods, as a senior minister called on the world’s most polluting countries to “wake up” and accept shared responsibility for a disaster that led to the death or disappearance of more than 6,000 people. Scientists believe the climate crisis had a role to...",
+        "whyItMatters": "Foreign minister Shisir Khanal tells the Guardian the world’s biggest economies need to help Nepal, which contributes less than 0.1% of glob",
+        "url": "https://www.theguardian.com/world/2026/sep/08/nepal-floods-climate-compensation",
+        "sourceTier": "HIGH_QUALITY_NEWS"
+      }
+    ],
+    "sourceCount": 4,
+    "sources": [
+      {
+        "title": "Two workers pulled alive from tunnel nine days after Nepal-Tibet floods"
+      },
+      {
+        "title": "Rescuers in Nepal find two more people alive after flash flood disaster"
+      },
+      {
+        "title": "Why Nepal is demanding climate justice and compensation after deadly floods"
+      },
+      {
+        "title": "Nepal says big polluters must ‘wake up’ as it calls for climate compensation over flood disaster"
+      }
+    ],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": true,
+      "evidenceState": "STRONG_EVIDENCE",
+      "reason": "Found 4 relevant reporting items across independent sources.",
+      "relevantCount": 4
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 7,
+    "query": "Will river flooding worsen tomorrow in Kathmandu?",
+    "success": true,
+    "elapsed": 12207,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent information is available in the current evidence set to answer this inquiry.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 8,
+    "query": "Tung Chee-hwa historical role in Hong Kong",
+    "success": true,
+    "elapsed": 13828,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent information is available in the current evidence set to answer this inquiry.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 9,
+    "query": "Japan earthquake damage and casualty update",
+    "success": true,
+    "elapsed": 12107,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No corroborated recent disaster or earthquake reports are currently documented for this specific location.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  },
+  {
+    "id": 10,
+    "query": "Quantum teleportation device consumer launch",
+    "success": true,
+    "elapsed": 12066,
+    "intent": "UNKNOWN",
+    "hasDirectAnswer": true,
+    "directAnswerPreview": "No sufficiently supported recent product-launch or model-release information is available in the current evidence set.",
+    "keyDevelopments": [],
+    "sourceCount": 0,
+    "sources": [],
+    "hasForecast": false,
+    "forecastCheckPass": true,
+    "evidenceSufficiency": {
+      "isSufficient": false,
+      "evidenceState": "NO_RELEVANT_EVIDENCE",
+      "reason": "Candidates found in database do not meet minimum relevance score.",
+      "relevantCount": 0
+    },
+    "sufficiencyCheckPass": true
+  }
+]

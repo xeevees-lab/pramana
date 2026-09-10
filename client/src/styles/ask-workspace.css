@@ -810,3 +810,153 @@
   font-weight: 600;
 }
 
+/* Provenance Tier Variants */
+.ask-workspace__provenance-tag--primary {
+  background: #ECFDF5 !important;
+  color: #065F46 !important;
+  border-color: #A7F3D0 !important;
+}
+
+.ask-workspace__provenance-tag--scientific {
+  background: #EFF6FF !important;
+  color: #1E40AF !important;
+  border-color: #BFDBFE !important;
+}
+
+.ask-workspace__provenance-tag--news {
+  background: #F5F3FF !important;
+  color: #6D28D9 !important;
+  border-color: #DDD6FE !important;
+}
+
+.ask-workspace__provenance-tag--external {
+  background: #FFFBEB !important;
+  color: #92400E !important;
+  border-color: #FDE68A !important;
+}
+
+/* Key Developments Section */
+.ask-workspace__key-developments {
+  margin: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-workspace__key-devs-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4B5563;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ask-workspace__key-devs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-workspace__key-dev-card {
+  background: #FAFAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  display: block;
+}
+
+.ask-workspace__key-dev-card:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+}
+
+.ask-workspace__key-dev-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ask-workspace__key-dev-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ask-workspace__key-dev-meta {
+  font-size: 0.6875rem;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ask-workspace__key-dev-org {
+  background: #EEF2FF;
+  color: #4338CA;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.ask-workspace__key-dev-body {
+  font-size: 0.8125rem;
+  color: #374151;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ask-workspace__key-dev-why {
+  font-size: 0.75rem;
+  color: #6D28D9;
+  background: #FAF5FF;
+  border: 1px solid #EDE9FE;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-top: 6px;
+}
+
+/* Collapsible Evidence & Verification Drawer */
+.ask-workspace__evidence-drawer {
+  margin-top: 1.25rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  overflow: hidden;
+}
+
+.ask-workspace__evidence-drawer summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #4B5563;
+  background: #F9FAFB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.ask-workspace__evidence-drawer summary:hover {
+  background: #F3F4F6;
+  color: #1F2937;
+}
+
+.ask-workspace__evidence-drawer-content {
+  padding: 12px 14px;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+

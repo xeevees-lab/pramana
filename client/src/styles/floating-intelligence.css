@@ -317,6 +317,38 @@
   border-radius: 0 4px 4px 0;
 }
 
+/* Key Developments in Floating Assistant */
+.floating-assistant__key-devs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.floating-assistant__key-devs-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #4B5563;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.floating-assistant__key-dev-item {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #374151;
+  border-left: 2px solid #C4B5FD;
+  padding-left: 6px;
+}
+
+.floating-assistant__key-dev-item strong {
+  color: #111827;
+  font-weight: 600;
+}
+
 .floating-assistant__sources {
   display: flex;
   flex-direction: column;

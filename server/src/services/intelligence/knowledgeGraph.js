@@ -32,10 +32,10 @@ export async function syncPostgresToNeo4j() {
       nodesCreated++;
     }
 
-    // 2. Sync Events
+    // 2. Sync Events (including event_types taxonomy)
     const { rows: events } = await query(
       `SELECT id, title, category, severity, status, location_name, country_code,
-              first_reported_at, last_updated_at
+              first_reported_at, last_updated_at, COALESCE(event_types, '{}') as event_types
        FROM events
        ORDER BY last_updated_at DESC
        LIMIT 250`
@@ -49,6 +49,7 @@ export async function syncPostgresToNeo4j() {
              ev.status = $status,
              ev.location = $location,
              ev.country = $country,
+             ev.event_types = $eventTypes,
              ev.last_updated_at = $lastUpdated`,
         {
           id: e.id,
@@ -58,6 +59,7 @@ export async function syncPostgresToNeo4j() {
           status: e.status || 'developing',
           location: e.location_name || '',
           country: e.country_code || '',
+          eventTypes: e.event_types || [],
           lastUpdated: e.last_updated_at?.toISOString() || new Date().toISOString(),
         }
       );

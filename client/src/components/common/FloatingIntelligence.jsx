@@ -254,8 +254,21 @@ export default function FloatingIntelligence() {
                     </p>
                   </div>
 
+                  {/* Key Developments (Part 21 Parity) */}
+                  {result.keyDevelopments && result.keyDevelopments.length > 0 && (
+                    <div className="floating-assistant__key-devs">
+                      <span className="floating-assistant__key-devs-label">⚡ Key Developments:</span>
+                      {result.keyDevelopments.slice(0, 3).map((kd, idx) => (
+                        <div key={idx} className="floating-assistant__key-dev-item">
+                          <strong>{kd.organization ? `${kd.organization} — ` : ''}{kd.title}:</strong>{' '}
+                          {kd.whatHappened || kd.whyItMatters}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Verified Picture snippet */}
-                  {result.theVerifiedPicture && (
+                  {result.theVerifiedPicture && (!result.keyDevelopments || result.keyDevelopments.length === 0) && (
                     <div className="floating-assistant__verified">
                       <strong>✓ Verified Picture:</strong> {result.theVerifiedPicture}
                     </div>

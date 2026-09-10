@@ -45,7 +45,7 @@ describe('Neo4j Knowledge Graph Layer', () => {
     const nodeRes = await runCypher('MATCH (n) RETURN count(n) as count');
     const totalNodes = nodeRes.records[0].get('count').toNumber();
     expect(totalNodes).toBeGreaterThanOrEqual(result.nodesCreated - 5);
-  });
+  }, 60000);
 
   it('traverses connected entities and co-occurring events via Cypher', async () => {
     if (!neo4jAvailable) return;

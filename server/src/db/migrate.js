@@ -106,6 +106,7 @@ async function migrate() {
     process.exit(1);
   } finally {
     await client.end();
+    process.exit(0);
   }
 }
 

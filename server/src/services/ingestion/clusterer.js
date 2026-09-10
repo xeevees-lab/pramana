@@ -1,4 +1,5 @@
 import { query } from '../../db/pool.js';
+import { classifyTextTaxonomy } from '../intelligence/eventTaxonomy.js';
 
 /**
  * Infer news category from title and content keywords.
@@ -98,25 +99,43 @@ export function inferSeverity(text) {
  */
 export async function clusterArticle(article) {
   const combinedText = `${article.title} ${article.summary || ''}`;
+  const category = inferCategory(combinedText);
+  const severity = inferSeverity(combinedText);
+
+  // Classify article taxonomy
+  const taxonomy = classifyTextTaxonomy(article.title, article.summary || article.content || '', { category });
+  try {
+    await query(
+      `UPDATE articles SET event_types = $1, event_type_scores = $2 WHERE id = $3`,
+      [taxonomy.eventTypes, JSON.stringify(taxonomy.scores), article.id]
+    );
+  } catch (taxErr) {
+    console.warn('[Clusterer] Taxonomy update warning:', taxErr.message);
+  }
 
   // 1. Vector cosine similarity search if article has embedding
   if (article.embedding) {
     try {
       const vectorRes = await query(
-        `SELECT id, title, 1 - (embedding <=> $1::vector) AS similarity
+        `SELECT id, title, category, event_types, 1 - (embedding <=> $1::vector) AS similarity
          FROM events
          WHERE embedding IS NOT NULL
            AND status != 'historical'
            AND last_updated_at > NOW() - INTERVAL '7 days'
          ORDER BY embedding <=> $1::vector
-         LIMIT 1`,
+         LIMIT 3`,
         [JSON.stringify(article.embedding)]
       );
 
-      if (vectorRes.rows.length > 0 && vectorRes.rows[0].similarity >= 0.80) {
-        const matched = vectorRes.rows[0];
-        await linkArticleToEvent(matched.id, article.id, matched.similarity);
-        return { eventId: matched.id, isNew: false };
+      for (const matched of vectorRes.rows) {
+        const hasSharedType = taxonomy.eventTypes.some(t => t !== 'OTHER' && (matched.event_types || []).includes(t));
+        const sameCategory = matched.category === category;
+        const compositeScore = (matched.similarity * 0.55) + (hasSharedType ? 0.25 : 0.0) + (sameCategory ? 0.20 : 0.0);
+
+        if (compositeScore >= 0.75 || matched.similarity >= 0.82) {
+          await linkArticleToEvent(matched.id, article.id, compositeScore, taxonomy.eventTypes);
+          return { eventId: matched.id, isNew: false };
+        }
       }
     } catch (err) {
       console.warn('[Clusterer] Vector search fallback:', err.message);
@@ -126,38 +145,38 @@ export async function clusterArticle(article) {
   // 2. Trigram similarity search fallback using PostgreSQL pg_trgm
   try {
     const textRes = await query(
-      `SELECT id, title, similarity(title, $1) AS sim
+      `SELECT id, title, category, event_types, similarity(title, $1) AS sim
        FROM events
        WHERE status != 'historical'
          AND last_updated_at > NOW() - INTERVAL '7 days'
-         AND similarity(title, $1) >= 0.40
+         AND similarity(title, $1) >= 0.38
        ORDER BY sim DESC
-       LIMIT 1`,
+       LIMIT 3`,
       [article.title]
     );
 
-    if (textRes.rows.length > 0) {
-      const matched = textRes.rows[0];
-      await linkArticleToEvent(matched.id, article.id, matched.sim);
-      return { eventId: matched.id, isNew: false };
+    for (const matched of textRes.rows) {
+      const hasSharedType = taxonomy.eventTypes.some(t => t !== 'OTHER' && (matched.event_types || []).includes(t));
+      const compositeScore = (matched.sim * 0.55) + (hasSharedType ? 0.25 : 0.0) + (matched.category === category ? 0.20 : 0.0);
+      if (compositeScore >= 0.65 || matched.sim >= 0.55) {
+        await linkArticleToEvent(matched.id, article.id, compositeScore, taxonomy.eventTypes);
+        return { eventId: matched.id, isNew: false };
+      }
     }
   } catch (err) {
     console.warn('[Clusterer] Text similarity search fallback:', err.message);
   }
 
   // 3. No match found -> create a new Event
-  const category = inferCategory(combinedText);
-  const severity = inferSeverity(combinedText);
-
   const newEventRes = await query(
     `INSERT INTO events (
        title, summary, category, severity, status,
        image_url, image_attribution, article_count, source_count,
-       first_reported_at, last_updated_at, embedding
+       first_reported_at, last_updated_at, embedding, event_types
      ) VALUES (
        $1, $2, $3, $4, 'developing',
        $5, $6, 1, 1,
-       $7, $7, $8
+       $7, $7, $8, $9
      )
      RETURNING id, title`,
     [
@@ -169,6 +188,7 @@ export async function clusterArticle(article) {
       article.image_attribution || null,
       article.published_at || new Date(),
       article.embedding ? JSON.stringify(article.embedding) : null,
+      taxonomy.eventTypes,
     ]
   );
 
@@ -201,7 +221,7 @@ export async function clusterArticle(article) {
  * Also evaluates whether the event headline should be updated
  * based on the incoming article's freshness and source quality.
  */
-async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
+async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0, incomingEventTypes = []) {
   await query(
     `INSERT INTO event_articles (event_id, article_id, relevance_score)
      VALUES ($1, $2, $3)
@@ -209,7 +229,7 @@ async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
     [eventId, articleId, relevanceScore]
   );
 
-  // Recalculate article_count and source_count
+  // Recalculate article_count and source_count, and merge event_types
   await query(
     `UPDATE events e
      SET
@@ -221,9 +241,12 @@ async function linkArticleToEvent(eventId, articleId, relevanceScore = 1.0) {
          WHERE ea.event_id = e.id AND a.source_id IS NOT NULL
        ),
        last_updated_at = NOW(),
+       event_types = ARRAY(
+         SELECT DISTINCT unnest(array_cat(COALESCE(e.event_types, '{}'), $3::TEXT[]))
+       ),
        image_url = COALESCE(e.image_url, (SELECT a.image_url FROM articles a WHERE a.id = $2 AND a.image_url IS NOT NULL LIMIT 1))
      WHERE e.id = $1`,
-    [eventId, articleId]
+    [eventId, articleId, incomingEventTypes]
   );
 
   // Deterministic headline evolution check

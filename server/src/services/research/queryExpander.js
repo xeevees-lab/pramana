@@ -123,13 +123,186 @@ export function classifyTemporalIntent(query = '') {
 }
 
 /**
+ * Detect structured query intent across the 20 news intent taxonomy.
+ *
+ * @param {string} query
+ * @param {'ask'|'fact_check'|'research'} mode
+ * @returns {{
+ *   primaryIntent: string,
+ *   intents: string[],
+ *   expectedEventTypes: string[],
+ *   demotedEventTypes: string[],
+ *   isBroadNewsQuery: boolean,
+ *   forecastRequested: boolean,
+ *   temporalFocus: 'CURRENT'|'RECENT'|'HISTORICAL'|'FUTURE'
+ * }}
+ */
+export function detectQueryIntent(query = '', mode = 'ask') {
+  const clean = (query || '').trim();
+  const lower = clean.toLowerCase();
+
+  const intents = [];
+  let expectedEventTypes = [];
+  let demotedEventTypes = [];
+  let isBroadNewsQuery = false;
+  let forecastRequested = false;
+
+  // 1. Check for explicit forecasting / future intent
+  if (
+    /\b(will|predict|prediction|forecast|future of|what happens next|what will happen|outlook|projections?|by 2026|by 2030)\b/i.test(lower)
+  ) {
+    intents.push('FORECAST');
+    forecastRequested = true;
+    expectedEventTypes.push('FORECAST');
+  }
+
+  // 2. Check for Fact Check intent
+  if (
+    mode === 'fact_check' ||
+    /\b(is this (?:claim )?true|is it true|fact[ -]check|verify if|did .* really|is .* fake|debunk|claim:)\b/i.test(lower)
+  ) {
+    intents.push('FACT_CHECK');
+  }
+
+  // 3. Product Launch & Model Release
+  const hasLaunchSignal = /\b(product launches?|launch|launched|launching|unveils?|debuts?|releases? new|released new|ships? new|commercial availability|new devices?|new hardware)\b/i.test(lower);
+  const hasModelSignal = /\b(model releases?|new (?:ai )?models?|llm releases?|weights?|foundation model|checkpoints?|gpt|claude|gemini|llama|mistral|deepseek)\b/i.test(lower);
+  const hasProductSignal = /\b(product|products|devices?|apps?|features?|tools?)\b/i.test(lower);
+
+  // 3. Model Release & Product Launch (Model Release is more specific)
+  if (hasModelSignal) {
+    intents.push('MODEL_RELEASE');
+    intents.push('PRODUCT_RELEASE');
+    expectedEventTypes.push('MODEL_RELEASE', 'PRODUCT_LAUNCH', 'PRODUCT_RELEASE', 'COMPANY_ANNOUNCEMENT');
+    demotedEventTypes.push('EXPERT_WARNING', 'OPINION');
+  }
+
+  if (hasLaunchSignal || (hasProductSignal && /\b(new|latest|recent)\b/i.test(lower))) {
+    if (!intents.includes('PRODUCT_LAUNCH')) intents.push('PRODUCT_LAUNCH');
+    if (!intents.includes('PRODUCT_RELEASE')) intents.push('PRODUCT_RELEASE');
+    expectedEventTypes.push('PRODUCT_LAUNCH', 'PRODUCT_RELEASE', 'FEATURE_RELEASE', 'COMPANY_ANNOUNCEMENT');
+    demotedEventTypes.push('EXPERT_WARNING', 'OPINION', 'FORECAST', 'ANALYSIS');
+  }
+
+  // 4. Research & Scientific Discovery
+  if (
+    /\b(scientists? (?:discover(?:ed)?)|scientific discovery|discoveries|researchers? (?:found|find|publish(?:ed)?)|(?:new )?stud(?:y|ies)|study findings?|research findings?|clinical trial|breakthrough)\b/i.test(lower)
+  ) {
+    intents.push('RESEARCH_FINDING');
+    intents.push('SCIENTIFIC_DISCOVERY');
+    expectedEventTypes.push('RESEARCH_FINDING', 'SCIENTIFIC_DISCOVERY', 'REPORT');
+    demotedEventTypes.push('OPINION', 'MARKET_MOVE', 'EXPERT_WARNING');
+  }
+
+  // 4b. Court Decisions & Legal Proceedings
+  if (
+    /\b(court|trial|verdict|homicide trial|sentencing|indictment|lawsuit|judge ruled|guilty|acquitted|convicted|plea|hearing)\b/i.test(lower)
+  ) {
+    intents.push('COURT_DECISION');
+    intents.push('LEGAL');
+    expectedEventTypes.push('COURT_DECISION', 'REPORT', 'INVESTIGATION');
+  }
+
+  // 5. Causal Analysis
+  if (
+    /\b(what caused|why did|cause of|root cause|how did .* happen|reasons? for)\b/i.test(lower)
+  ) {
+    intents.push('CAUSE');
+    if (mode === 'research') intents.push('RESEARCH_FINDING');
+    expectedEventTypes.push('REPORT', 'INVESTIGATION', 'DISASTER', 'CONFLICT', 'ANALYSIS');
+  }
+
+  // 6. Disaster Status
+  if (
+    /\b(earthquake|floods?|flooding|cyclone|hurricane|typhoon|tsunami|wildfire|landslide)\b/i.test(lower)
+  ) {
+    intents.push('DISASTER_STATUS');
+    expectedEventTypes.push('DISASTER', 'REPORT');
+  }
+
+  // 7. Policy & Regulation
+  if (
+    /\b(regulat\w*|policy|policies|law|laws|legislation|act of|ftc|doj|antitrust|compliance|enforcement)\b/i.test(lower)
+  ) {
+    intents.push('POLICY');
+    intents.push('REGULATION');
+    expectedEventTypes.push('POLICY', 'REGULATION', 'LAW', 'GOVERNMENT');
+  }
+
+  // 8. Business & Markets
+  if (
+    /\b(business developments?|deals?|acquisitions?|merger|earnings|stocks?|nasdaq|market moves?)\b/i.test(lower)
+  ) {
+    intents.push('BUSINESS');
+    intents.push('MARKETS');
+    expectedEventTypes.push('BUSINESS_DEAL', 'ACQUISITION', 'MARKET_MOVE', 'COMPANY_ANNOUNCEMENT');
+  }
+
+  // 9. History & Timeline
+  if (
+    /\b(history of|historical role|historical background|historical figure|historical context|history)\b/i.test(lower)
+  ) {
+    intents.push('HISTORY');
+    intents.push('TIMELINE');
+    expectedEventTypes.push('REPORT', 'ANALYSIS');
+  } else if (
+    /\b(timeline|chronology|evolution of|what came before)\b/i.test(lower)
+  ) {
+    intents.push('TIMELINE');
+    intents.push('HISTORY');
+  }
+
+  // 10. Broad news overview & Latest news
+  const isBroadQuery = /\b(latest (?:ai )?technology|latest tech news|latest news|world news|tech overview|technology news|industry developments?)\b/i.test(lower) ||
+    (lower.split(' ').length <= 4 && /\b(latest|news|technology|tech|ai)\b/i.test(lower) && !hasLaunchSignal && !hasModelSignal);
+
+  if (isBroadQuery) {
+    isBroadNewsQuery = true;
+    if (!intents.includes('LATEST_NEWS')) intents.push('LATEST_NEWS');
+    if (!intents.includes('NEWS_OVERVIEW')) intents.push('NEWS_OVERVIEW');
+    expectedEventTypes.push(
+      'PRODUCT_LAUNCH',
+      'MODEL_RELEASE',
+      'RESEARCH_FINDING',
+      'COMPANY_ANNOUNCEMENT',
+      'POLICY',
+      'BUSINESS_DEAL'
+    );
+  } else if (/\b(latest|recent|updates?|today|now)\b/i.test(lower) && intents.length === 0) {
+    intents.push('LATEST_NEWS');
+  }
+
+  if (intents.length === 0) {
+    intents.push('GENERAL_EXPLANATION');
+  }
+
+  // Deduplicate and filter expected/demoted
+  expectedEventTypes = [...new Set(expectedEventTypes)];
+  demotedEventTypes = [...new Set(demotedEventTypes)].filter(t => !expectedEventTypes.includes(t));
+
+  const primaryIntent = intents[0];
+
+  return {
+    primaryIntent,
+    intents,
+    expectedEventTypes,
+    demotedEventTypes,
+    isBroadNewsQuery,
+    forecastRequested,
+    temporalFocus: forecastRequested ? 'FUTURE' : (intents.includes('HISTORY') ? 'HISTORICAL' : 'CURRENT'),
+  };
+}
+
+/**
  * Deconstruct a user query into structured search hypotheses.
  * These are candidate investigation paths, NOT established facts.
  *
  * @param {string} userQuery - The input prompt, topic, or claim
+ * @param {'ask'|'fact_check'|'research'} mode - Query mode
  * @returns {Promise<{
  *   originalQuery: string,
  *   temporalIntent: string,
+ *   queryIntent: ReturnType<typeof detectQueryIntent>,
  *   highSignalTokens: string[],
  *   targetEntities: string[],
  *   candidateHypotheses: string[],
@@ -137,11 +310,12 @@ export function classifyTemporalIntent(query = '') {
  *   expandedQueryString: string
  * }>}
  */
-export async function expandQuery(userQuery) {
+export async function expandQuery(userQuery, mode = 'ask') {
   if (!userQuery || typeof userQuery !== 'string' || !userQuery.trim()) {
     return {
       originalQuery: '',
       temporalIntent: 'GENERAL_TOPIC',
+      queryIntent: detectQueryIntent('', mode),
       highSignalTokens: [],
       targetEntities: [],
       candidateHypotheses: [],
@@ -153,6 +327,7 @@ export async function expandQuery(userQuery) {
   const cleanQuery = userQuery.trim();
   const lower = cleanQuery.toLowerCase();
   const temporalIntent = classifyTemporalIntent(cleanQuery);
+  const queryIntent = detectQueryIntent(cleanQuery, mode);
 
   // 1. Deterministic baseline extraction
   const tokens = lower.split(/[^a-zA-Z0-9_-]+/).filter(t => t.length > 2 || HIGH_VALUE_SHORT_TOKENS.has(t));
@@ -242,6 +417,7 @@ JSON:`;
   return {
     originalQuery: cleanQuery,
     temporalIntent,
+    queryIntent,
     highSignalTokens,
     targetEntities: finalEntities,
     candidateHypotheses,

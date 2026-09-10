@@ -1,7 +1,8 @@
 import { query } from '../../db/pool.js';
 import { isGeminiConfigured, generateEmbedding } from '../gemini.js';
 import { queryGraphContext } from '../intelligence/knowledgeGraph.js';
-import { expandQuery, pruneHypotheses } from './queryExpander.js';
+import { expandQuery, pruneHypotheses, detectQueryIntent } from './queryExpander.js';
+import { rankCandidates } from '../ml/newsRanker.js';
 
 /**
  * Configurable thresholds for Two-Stage Multi-Lane Hybrid Retrieval.
@@ -149,7 +150,7 @@ export async function retrieveHybridContext({
     try {
       const { rows } = await query(
         `SELECT id, title, summary, category, severity, status, location_name, country_code,
-                source_count, article_count, first_reported_at, last_updated_at,
+                source_count, article_count, first_reported_at, last_updated_at, event_types,
                 1 - (embedding <=> $1::vector) AS similarity
          FROM events
          WHERE embedding IS NOT NULL
@@ -183,7 +184,7 @@ export async function retrieveHybridContext({
     try {
       const { rows } = await query(
         `SELECT id, title, summary, category, severity, status, location_name, country_code,
-                source_count, article_count, first_reported_at, last_updated_at,
+                source_count, article_count, first_reported_at, last_updated_at, event_types,
                 0.5 AS similarity
          FROM events
          WHERE (${eventClauses.join(' OR ')})
@@ -209,6 +210,7 @@ export async function retrieveHybridContext({
     try {
       const { rows } = await query(
         `SELECT a.id, a.title, a.summary, a.content, a.url, a.published_at, a.wire_service,
+                a.event_types, a.event_type_scores, a.external_provenance,
                 s.name AS source_name, s.type AS source_type, s.reliability_score,
                 1 - (a.embedding <=> $1::vector) AS similarity
          FROM articles a
@@ -244,6 +246,7 @@ export async function retrieveHybridContext({
     try {
       const { rows } = await query(
         `SELECT a.id, a.title, a.summary, a.content, a.url, a.published_at, a.wire_service,
+                a.event_types, a.event_type_scores, a.external_provenance,
                 s.name AS source_name, s.type AS source_type, s.reliability_score,
                 0.5 AS similarity
          FROM articles a
@@ -412,9 +415,16 @@ export async function retrieveHybridContext({
     }
   }
 
-  // Sort articles by composite score descending
-  scoredArticles.sort((a, b) => b.compositeScore - a.compositeScore);
-  const retainedArticles = scoredArticles.slice(0, limit);
+  const queryInfo = {
+    originalQuery: cleanQuery,
+    queryIntent: queryExp.queryIntent || detectQueryIntent(cleanQuery),
+    highSignalTokens,
+    targetEntities,
+  };
+
+  // Rank articles with trainable ranker (respects PRAMANA_RANKER_STRATEGY)
+  const rankedArticles = rankCandidates(queryInfo, scoredArticles);
+  const retainedArticles = rankedArticles.slice(0, limit);
 
   // --- Rerank Events ---
   const scoredEvents = [];
@@ -452,8 +462,9 @@ export async function retrieveHybridContext({
     }
   }
 
-  scoredEvents.sort((a, b) => b.compositeScore - a.compositeScore);
-  const retainedEvents = scoredEvents.slice(0, limit);
+  // Rank events with trainable ranker
+  const rankedEvents = rankCandidates(queryInfo, scoredEvents);
+  const retainedEvents = rankedEvents.slice(0, limit);
 
   // --- Fetch Corroborating Claims & Evidence for Retained Events ---
   let claims = [];
@@ -554,6 +565,8 @@ export async function retrieveHybridContext({
   return {
     query: cleanQuery,
     temporalIntent,
+    queryIntent: queryExp.queryIntent || detectQueryIntent(cleanQuery),
+    rankerStrategy: process.env.PRAMANA_RANKER_STRATEGY || 'NEW_NEWS_RANKER',
     expansion: queryExp,
     events: retainedEvents,
     articles: retainedArticles,

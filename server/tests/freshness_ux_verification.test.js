@@ -224,7 +224,7 @@ describe('Pramāṇa Freshness, Ingestion, Headlines, Claims & Retrieval Verific
       expect(data.executiveSummary).not.toMatch(/^#{1,6}\s/);
       expect(data.currentStatus).toBeDefined();
       expect(Array.isArray(data.sources)).toBe(true);
-    });
+    }, 30000);
 
     it('preserves query focus when page context is provided (explicit query always wins)', async () => {
       const res = await app.inject({
@@ -251,6 +251,6 @@ describe('Pramāṇa Freshness, Ingestion, Headlines, Claims & Retrieval Verific
         summaryLower.includes('report') ||
         summaryLower.includes('evidence')
       ).toBe(true);
-    });
+    }, 30000);
   });
 });

@@ -1,5 +1,6 @@
 import { retrieveHybridContext } from './hybridRetriever.js';
-import { expandQuery, pruneHypotheses } from './queryExpander.js';
+import { expandQuery, pruneHypotheses, detectQueryIntent } from './queryExpander.js';
+import { evaluateEvidenceSufficiency, retrieveExternalAuthoritativeResearch } from './externalResearcher.js';
 import { readUrlContent } from './urlReader.js';
 import { readVideoMetadata, isVideoUrl } from './videoReader.js';
 import { assembleCausalChain } from '../intelligence/causalEngine.js';
@@ -151,12 +152,44 @@ export async function processResearchQuery({
     expansion,
   } = retrievalResult;
 
+  const queryIntent = retrievalResult.queryIntent || detectQueryIntent(effectiveQuery, mode);
   const queryHighSignalTokens = expansion?.highSignalTokens || [];
+
+  // Evidence Sufficiency Gate
+  const queryInfo = {
+    originalQuery: effectiveQuery,
+    queryIntent,
+    highSignalTokens: queryHighSignalTokens,
+  };
+
+  let sufficiency = evaluateEvidenceSufficiency(queryInfo, articles);
+  let externalArticles = [];
+
+  if (!sufficiency.isSufficient) {
+    try {
+      externalArticles = await retrieveExternalAuthoritativeResearch(queryInfo);
+      if (externalArticles.length > 0) {
+        articles.push(...externalArticles);
+        sufficiency = evaluateEvidenceSufficiency(queryInfo, articles);
+      }
+    } catch (extErr) {
+      console.warn('[AskEngine] External research fallback warning:', extErr.message);
+    }
+  }
 
   // Helper to verify if an item actually pertains to the query topic (prevents nearest-event substitution)
   const isItemRelevantToQuery = (item) => {
     if (!item) return false;
     const corpus = `${item.title} ${item.summary || ''}`.toLowerCase();
+
+    // If candidate exclusively matches demoted types for this query intent, suppress
+    const demotedTypes = queryIntent.demotedEventTypes || [];
+    const itemTypes = item.event_types || [];
+    if (demotedTypes.length > 0 && itemTypes.length > 0) {
+      const hasOnlyDemoted = itemTypes.every(t => demotedTypes.includes(t) || t === 'OTHER');
+      if (hasOnlyDemoted) return false;
+    }
+
     if (queryHighSignalTokens.length === 0) return true;
 
     let matches = 0;
@@ -206,14 +239,25 @@ export async function processResearchQuery({
   // 3. Narrative Framing Analysis
   const narrativeReport = await analyzeNarratives(articles, narratives, true);
 
-  // 4. Deterministic ML Escalation Forecast
-  const mlForecast = await computeGroundedForecast({
-    event: topEvent || { article_count: articles.length, source_count: new Set(articles.map(a => a.source_name)).size },
-    articles,
-    claims: dbClaims,
-    entities,
-    persist: false,
-  });
+  // 4. Deterministic ML Escalation Forecast (Strictly suppressed in Ask mode unless future requested)
+  let mlForecast = null;
+  const shouldProduceForecast = mode === 'research' || queryIntent.forecastRequested === true;
+
+  if (shouldProduceForecast) {
+    mlForecast = await computeGroundedForecast({
+      event: topEvent || { article_count: articles.length, source_count: new Set(articles.map(a => a.source_name)).size },
+      articles,
+      claims: dbClaims,
+      entities,
+      persist: false,
+    });
+  } else {
+    mlForecast = {
+      status: 'NO_FORECAST_JUSTIFIED',
+      reason: 'Forecast suppressed for standard news inquiries to prevent speculative alarmism.',
+      modelVersion: 'pramana-calibrated-logreg-v1.2',
+    };
+  }
 
   // 5. Deterministic Claim Verification with Syndication Check
   const verifiedClaims = [];
@@ -405,8 +449,18 @@ Research Summary:`;
     }
   }
 
-  // 8. Deterministic Fallback if LLM unavailable or timed out
-  if (!executiveSummary) {
+  // 8. Honest Insufficiency Check and Deterministic Fallback
+  if (!sufficiency.isSufficient) {
+    if (queryIntent.primaryIntent === 'PRODUCT_LAUNCH' || queryIntent.primaryIntent === 'MODEL_RELEASE') {
+      executiveSummary = 'No sufficiently supported recent product-launch or model-release information is available in the current evidence set.';
+    } else if (queryIntent.primaryIntent === 'DISASTER_STATUS') {
+      executiveSummary = 'No corroborated recent disaster or earthquake reports are currently documented for this specific location.';
+    } else if (queryIntent.primaryIntent === 'RESEARCH_FINDING' || queryIntent.primaryIntent === 'SCIENTIFIC_DISCOVERY') {
+      executiveSummary = 'No empirical research findings or published scientific discoveries are documented for this query in current evidence.';
+    } else {
+      executiveSummary = 'No sufficiently supported recent information is available in the current evidence set to answer this inquiry.';
+    }
+  } else if (!executiveSummary) {
     if (relevantEvents.length > 0) {
       const ev = relevantEvents[0];
       executiveSummary = mode === 'ask'
@@ -442,16 +496,15 @@ Research Summary:`;
           : 'No corroborated emergency or ongoing alert is currently detected in latest dispatches.'),
   };
 
-  // Determine evidence state strictly based on relevant items
-  const hasRelevantItems = relevantArticles.length > 0 || relevantEvents.length > 0;
-  const evidenceState = hasRelevantItems
+  // Determine evidence state strictly based on sufficiency gate
+  const evidenceState = sufficiency.isSufficient
     ? 'CORROBORATED'
-    : (temporalIntent === 'CURRENT_STATUS' ? 'CURRENT_ACTIVITY_NOT_FOUND' : 'NO_RELEVANT_EVIDENCE_FOUND');
+    : (sufficiency.evidenceState || (temporalIntent === 'CURRENT_STATUS' ? 'CURRENT_ACTIVITY_NOT_FOUND' : 'NO_RELEVANT_EVIDENCE_FOUND'));
 
-  // If no items were relevant, do not display distractor sources
-  const targetArticles = relevantArticles.length > 0
-    ? relevantArticles
-    : (relevantEvents.length > 0 ? articles : []);
+  // Target articles pool (only relevant items when sufficient)
+  const targetArticles = sufficiency.isSufficient
+    ? (relevantArticles.length > 0 ? relevantArticles : articles)
+    : [];
 
   const allFormattedSources = targetArticles.map(a => ({
     id: a.id,
@@ -462,20 +515,53 @@ Research Summary:`;
     publishedAt: a.published_at,
     excerpt: a.summary || (a.content ? a.content.slice(0, 180) + '...' : ''),
     reliabilityScore: a.reliability_score ? Math.round(a.reliability_score * 100) : 50,
+    sourceTier: a.source_tier || (a.reliability_score >= 0.90 ? 'PRIMARY_SOURCE' : 'HIGH_QUALITY_NEWS'),
     wireService: a.wire_service || null,
+    isExternal: Boolean(a.is_external),
     url: a.url,
   }));
+
+  // Structured Key Developments for Answer-First hierarchy (Part 15)
+  const keyDevelopments = [];
+  if (sufficiency.isSufficient && targetArticles.length > 0) {
+    for (const art of targetArticles.slice(0, 4)) {
+      keyDevelopments.push({
+        title: art.title,
+        date: art.published_at ? new Date(art.published_at).toISOString().slice(0, 10) : 'Recent',
+        organization: art.source_name || 'News Source',
+        whatHappened: art.summary || art.title,
+        whyItMatters: art.summary ? art.summary.slice(0, 140) : 'Corroborated reporting from independent sources.',
+        url: art.url,
+        sourceTier: art.source_tier || (art.reliability_score >= 0.90 ? 'PRIMARY_SOURCE' : 'HIGH_QUALITY_NEWS'),
+      });
+    }
+  }
+
+  // Structured Evidence Drawer for Optional Verification (Part 15 & 16)
+  const evidenceDrawer = {
+    verifiedClaimsCount: verifiedClaims.length,
+    claims: verifiedClaims,
+    supportedHypotheses,
+    causalLinksCount: (causalChain || []).length,
+    isOpenByDefault: mode === 'fact_check',
+  };
 
   return {
     mode,
     query: effectiveQuery,
     temporalIntent,
+    queryIntent,
     evidenceState,
+    evidenceSufficiency: sufficiency,
+    isExternalFallbackUsed: externalArticles.length > 0,
     targetUrl,
     urlAnalysis: urlAnalysis || null,
     videoAnalysis: videoAnalysis || null,
     executiveSummary,
     answer: executiveSummary, // backwards compatibility
+    directAnswer: executiveSummary,
+    keyDevelopments,
+    evidenceDrawer,
     theVerifiedPicture,
     currentStatus,
     provenance,
@@ -488,7 +574,7 @@ Research Summary:`;
     causalChain: causalChain || [],
     timeline,
     narrativeReport,
-    mlForecast: mlForecast?.status === 'FORECAST_PRODUCED' ? mlForecast : { status: 'NO_FORECAST_JUSTIFIED', modelVersion: 'pramana-calibrated-logreg-v1.2' },
+    mlForecast,
     eventFamily,
     videoNote: videoAnalysis?.note || null,
     sources: allFormattedSources.slice(0, 4),

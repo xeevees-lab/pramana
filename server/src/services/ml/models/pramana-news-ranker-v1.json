@@ -1,0 +1,100 @@
+{
+  "datasetVersion": "pramana-news-ranker-data-v1",
+  "modelVersion": "pramana-news-ranker-v1",
+  "featureVersion": "v1.0",
+  "trainingTimestamp": "2026-09-10T08:19:28.984Z",
+  "trainingPeriod": "2026-03-18 to 2026-09-09",
+  "validationPeriod": "2026-09-09 to 2026-09-09",
+  "testPeriod": "2026-09-09 to 2026-09-10",
+  "totalSamples": 9680,
+  "splits": {
+    "trainCount": 5824,
+    "valCount": 1936,
+    "testCount": 1920
+  },
+  "intercept": -7.9381,
+  "weights": {
+    "query_semantic_similarity": -0.5179,
+    "query_lexical_overlap": 1.2017,
+    "headline_match": 0.2361,
+    "entity_overlap": -0.2056,
+    "topic_match": 5.0833,
+    "event_type_match": 6.1589,
+    "temporal_relevance": -1.0384,
+    "source_reliability": -1.2708,
+    "source_independence": -0.2576,
+    "event_importance": -0.3444,
+    "novelty": -0.622,
+    "historical_current_fit": -0.9458,
+    "redundancy_penalty": 0.0026,
+    "syndication_similarity": 0.0026,
+    "graph_relevance": -0.4138,
+    "direct_answer_relevance": 2.5716
+  },
+  "featureNames": [
+    "query_semantic_similarity",
+    "query_lexical_overlap",
+    "headline_match",
+    "entity_overlap",
+    "topic_match",
+    "event_type_match",
+    "temporal_relevance",
+    "source_reliability",
+    "source_independence",
+    "event_importance",
+    "novelty",
+    "historical_current_fit",
+    "redundancy_penalty",
+    "syndication_similarity",
+    "graph_relevance",
+    "direct_answer_relevance"
+  ],
+  "metrics": {
+    "baseline": {
+      "precision": 0.1969,
+      "recall": 0.431,
+      "f1": 0.2703,
+      "precisionAt5": 0.1375,
+      "ndcgAt5": 0.5815,
+      "ndcgAt10": 0.5777
+    },
+    "trained": {
+      "precision": 0.2197,
+      "recall": 0.5,
+      "f1": 0.3053,
+      "precisionAt5": 0.225,
+      "ndcgAt5": 0.7315,
+      "ndcgAt10": 0.7083
+    },
+    "intentBreakdown": {
+      "LATEST_NEWS": {
+        "baselineNDCG5": 0.831,
+        "trainedNDCG5": 0.6916
+      },
+      "PRODUCT_LAUNCH": {
+        "baselineNDCG5": 0.059,
+        "trainedNDCG5": 0.786
+      },
+      "MODEL_RELEASE": {
+        "baselineNDCG5": 0.6164,
+        "trainedNDCG5": 1
+      },
+      "RESEARCH_FINDING": {
+        "baselineNDCG5": 0,
+        "trainedNDCG5": 1
+      },
+      "DISASTER_STATUS": {
+        "baselineNDCG5": 0.5,
+        "trainedNDCG5": 0.5
+      },
+      "CAUSE": {
+        "baselineNDCG5": 1,
+        "trainedNDCG5": 0
+      },
+      "POLICY": {
+        "baselineNDCG5": 0.1525,
+        "trainedNDCG5": 0.5762
+      }
+    }
+  }
+}
