@@ -120,7 +120,17 @@ export default async function askRoutes(app) {
   });
 
   /**
+   * DELETE /api/ask/conversations
+   * Clear all research conversations for the authenticated user.
+   */
+  app.delete('/ask/conversations', { preHandler: [requireAuth] }, async (request) => {
+    await query(`DELETE FROM conversations WHERE user_id = $1`, [request.user.id]);
+    return { success: true, message: 'All research conversations cleared.' };
+  });
+
+  /**
    * DELETE /api/ask/conversations/:id
+
    * Deletes a conversation session, strictly verifying user ownership.
    */
   app.delete('/ask/conversations/:id', { preHandler: [requireAuth] }, async (request, reply) => {

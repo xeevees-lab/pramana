@@ -5,11 +5,12 @@ import useAuthStore from '../stores/authStore.js';
 import '../styles/ask-workspace.css';
 
 const STARTER_PROMPTS = [
+  { label: 'Trump Tariff Policy', query: 'What is the current policy and timeline regarding Trump tariff proposals?' },
+  { label: 'BRICS Summit', query: 'What are the key developments, agreements, and statements from the BRICS summit?' },
+  { label: 'New Delhi Developments', query: 'What are the verified facts regarding recent governmental developments in New Delhi?' },
   { label: 'Nepal Flood Situation', query: 'What is actually happening with the Nepal floods and landslides?' },
-  { label: 'European Unity Study', query: 'Explain the background and key findings of the European unity report.' },
-  { label: 'Slain Surfers Mexico Trial', query: 'What are the confirmed facts in the Australian surfers homicide trial?' },
-  { label: 'Tung Chee-hwa Historical Legacy', query: 'Who was Tung Chee-hwa and what was his historical role in Hong Kong?' },
 ];
+
 
 /**
  * Cleanly format text paragraphs, stripping stray markdown headers/rules
@@ -426,7 +427,12 @@ export default function AskPage() {
   const [conversations, setConversations] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingConversations, setLoadingConversations] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isMicActive, setIsMicActive] = useState(false);
   const threadEndRef = useRef(null);
+
 
   // Sync mode changes with URL query parameter
   const handleModeChange = (newMode) => {
@@ -632,31 +638,74 @@ export default function AskPage() {
     }
   };
 
+  // Filter conversations for the sidebar search
+  const filteredConversations = conversations.filter((c) =>
+    !historySearch.trim() || (c.title || '').toLowerCase().includes(historySearch.toLowerCase())
+  );
+
   return (
     <div className="ask-layout" role="region" aria-label="AI Research Workspace">
-      {/* In-Ask Conversation History Sidebar */}
+      {/* Wireframe 2.1: Left Research History Sidebar */}
       <aside className={`ask-sidebar ${sidebarOpen ? 'ask-sidebar--open' : 'ask-sidebar--collapsed'}`} aria-label="Research History">
-        <div className="ask-sidebar__header">
+        {/* Brand & collapse */}
+        <div className="ask-sidebar__brand">
+          <Link to="/explore" className="ask-sidebar__logo">PRAMĀṆA</Link>
+          <button
+            type="button"
+            className="ask-sidebar__toggle-inner"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Primary New Chat Button */}
+        <div className="ask-sidebar__actions">
           <button
             type="button"
             className="ask-sidebar__new-btn"
             onClick={handleNewChat}
-            title="Start fresh research session"
+            title="Start new research chat"
           >
-            <span>+</span> New Research Chat
+            <span>+</span> New Chat
           </button>
         </div>
 
+        {/* Search Input in Sidebar */}
+        <div className="ask-sidebar__search-wrap">
+          <svg className="ask-sidebar__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search recents..."
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+            className="ask-sidebar__search-input"
+            aria-label="Search recent conversations"
+          />
+        </div>
+
+        {/* Recents List */}
         <div className="ask-sidebar__list">
-          <div className="ask-sidebar__section-title">Saved Conversations</div>
+          <div className="ask-sidebar__section-title">
+            Recents {filteredConversations.length > 0 && `(${filteredConversations.length})`}
+          </div>
           {loadingConversations ? (
             <div className="ask-sidebar__empty">Loading history...</div>
-          ) : conversations.length === 0 ? (
+          ) : filteredConversations.length === 0 ? (
             <div className="ask-sidebar__empty">
-              {user ? 'No saved research threads yet.' : 'Sign in to save research threads across sessions.'}
+              {historySearch
+                ? 'No matching threads.'
+                : user
+                ? 'No saved research threads yet.'
+                : 'Sign in to save research threads.'}
             </div>
           ) : (
-            conversations.map((conv) => (
+            filteredConversations.map((conv) => (
               <div
                 key={conv.id}
                 className={`ask-sidebar__item ${conv.id === activeConversationId ? 'ask-sidebar__item--active' : ''}`}
@@ -687,101 +736,208 @@ export default function AskPage() {
             ))
           )}
         </div>
+
+        {/* Wireframe 2.1: Bottom User Widget in Sidebar */}
+        <div className="ask-sidebar__user">
+          <Link to="/profile" className="ask-sidebar__user-link">
+            <div className="ask-sidebar__user-avatar">
+              {(user?.custom_avatar_url || user?.photo_url) ? (
+                <img src={user.custom_avatar_url || user.photo_url} alt="" />
+              ) : (
+                <span>{(user?.display_name || user?.email || 'U')[0].toUpperCase()}</span>
+              )}
+            </div>
+            <div className="ask-sidebar__user-info">
+              <span className="ask-sidebar__user-name">{user?.display_name || 'Researcher'}</span>
+              <span className="ask-sidebar__user-sub">Account &amp; Settings</span>
+            </div>
+          </Link>
+        </div>
       </aside>
 
       {/* Main Research Workspace */}
       <div className="ask-workspace">
-        {/* Header */}
+        {/* Header Bar */}
         <header className="ask-workspace__header">
           <div className="ask-workspace__header-top">
-            <h1 className="ask-workspace__title">
-              <span>◇</span> Ask PRAMĀṆA
-            </h1>
-            <button
-              type="button"
-              className="ask-workspace__sidebar-toggle"
-              onClick={() => setSidebarOpen((prev) => !prev)}
-              title={sidebarOpen ? 'Hide History' : 'Show History'}
-              aria-label="Toggle history sidebar"
-            >
-              <span>{sidebarOpen ? '◀' : '▶'}</span> History
-            </button>
-          </div>
-          <p className="ask-workspace__subtitle">
-            Grounded conversational intelligence, cross-source research, and claim verification powered by real dispatches.
-          </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  className="ask-workspace__sidebar-toggle"
+                  onClick={() => setSidebarOpen(true)}
+                  title="Show Recents Sidebar"
+                  aria-label="Show sidebar"
+                >
+                  ☰ Recents
+                </button>
+              )}
+              <h1 className="ask-workspace__title">
+                <span>◇</span> PRAMĀṆA Intelligence
+              </h1>
+            </div>
 
-          {/* Mode Selector */}
-          <div className="ask-workspace__modes" role="tablist" aria-label="Research Modes">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'ask'}
-              className={`ask-workspace__mode-btn ${mode === 'ask' ? 'ask-workspace__mode-btn--active' : ''}`}
-              onClick={() => handleModeChange('ask')}
-            >
-              <span>💬</span> Ask
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'fact_check'}
-              className={`ask-workspace__mode-btn ${mode === 'fact_check' ? 'ask-workspace__mode-btn--active' : ''}`}
-              onClick={() => handleModeChange('fact_check')}
-            >
-              <span>⚖️</span> Fact Check
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'research'}
-              className={`ask-workspace__mode-btn ${mode === 'research' ? 'ask-workspace__mode-btn--active' : ''}`}
-              onClick={() => handleModeChange('research')}
-            >
-              <span>🔬</span> Research
-            </button>
+            {/* Mode Selector */}
+            <div className="ask-workspace__modes" role="tablist" aria-label="Research Modes">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'ask'}
+                className={`ask-workspace__mode-btn ${mode === 'ask' ? 'ask-workspace__mode-btn--active' : ''}`}
+                onClick={() => handleModeChange('ask')}
+              >
+                <span>💬</span> Ask
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'fact_check'}
+                className={`ask-workspace__mode-btn ${mode === 'fact_check' ? 'ask-workspace__mode-btn--active' : ''}`}
+                onClick={() => handleModeChange('fact_check')}
+              >
+                <span>⚖️</span> Fact Check
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'research'}
+                className={`ask-workspace__mode-btn ${mode === 'research' ? 'ask-workspace__mode-btn--active' : ''}`}
+                onClick={() => handleModeChange('research')}
+              >
+                <span>🔬</span> Deep Research
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Conversation Thread */}
+        {/* Conversation Thread / Welcome Canvas */}
         <div className="ask-workspace__thread">
           {messages.length === 0 ? (
-            <div className="ask-workspace__welcome">
-              <div className="ask-workspace__welcome-icon" aria-hidden="true">
-                {mode === 'fact_check' ? '⚖️' : mode === 'research' ? '🔬' : '◇'}
-              </div>
-              <h2 className="ask-workspace__welcome-title">
-                {mode === 'fact_check'
-                  ? 'Verify Claims & Statements'
-                  : mode === 'research'
-                  ? 'Deep Investigative Analysis'
-                  : 'What would you like to investigate?'}
-              </h2>
-              <p className="ask-workspace__welcome-desc">
-                {mode === 'fact_check'
-                  ? 'Paste an article URL, video link, or text statement to cross-examine claims against real-time reporting.'
-                  : 'Enter a question, topic, article URL, or public video link. Follow up with contextual questions without repeating yourself.'}
+            <div className="ask-workspace__hero-welcome">
+              {/* Wireframe 2.1: Large Centered Heading */}
+              <h1 className="ask-workspace__hero-heading">
+                What news are you looking for?
+              </h1>
+              <p className="ask-workspace__hero-subheading">
+                Multi-source intelligence, cross-verified facts, and living context.
               </p>
 
-              {/* Starter Prompts */}
-              <div className="ask-workspace__starters">
-                {STARTER_PROMPTS.map((prompt, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="ask-workspace__starter-card"
-                    onClick={() => handleSubmit(null, prompt.query)}
-                  >
-                    <div>
-                      <strong>{prompt.label}</strong>
-                      <div style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '2px' }}>{prompt.query}</div>
+              {/* Wireframe 2.1: Large Central Search / Research Input */}
+              <form onSubmit={handleSubmit} className="ask-hero-search-box">
+                <button
+                  type="button"
+                  className={`ask-hero-search__action-btn ${showUrlInput ? 'ask-hero-search__action-btn--active' : ''}`}
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  title="Attach article URL or document statement"
+                  aria-label="Attach article URL"
+                >
+                  +
+                </button>
+
+                <div className="ask-hero-search__input-wrapper">
+                  {showUrlInput && (
+                    <div className="ask-hero-search__url-badge">
+                      <span>🔗 Attachment / URL Mode</span>
+                      <button type="button" onClick={() => setShowUrlInput(false)}>✕</button>
                     </div>
-                    <span style={{ color: '#8B5CF6' }}>→</span>
-                  </button>
-                ))}
+                  )}
+                  <input
+                    type="text"
+                    className="ask-hero-search__input"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={
+                      showUrlInput
+                        ? 'Paste article URL, dispatch link, or statement to verify...'
+                        : 'Search global news, ask a question, or paste an article URL...'
+                    }
+                    autoFocus
+                    disabled={loading}
+                    aria-label="Research search input"
+                  />
+                </div>
+
+                {/* Model Selector Dropdown */}
+                <div className="ask-hero-search__model-select-wrap">
+                  <select
+                    className="ask-hero-search__model-select"
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    aria-label="Select intelligence model"
+                  >
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                  </select>
+                </div>
+
+                {/* Mic Action Icon */}
+                <button
+                  type="button"
+                  className={`ask-hero-search__mic-btn ${isMicActive ? 'ask-hero-search__mic-btn--active' : ''}`}
+                  onClick={() => setIsMicActive(!isMicActive)}
+                  title={isMicActive ? 'Voice input listening...' : 'Voice Search'}
+                  aria-label="Voice input"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                </button>
+
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  className="ask-hero-search__send-btn"
+                  disabled={!input.trim() || loading}
+                  aria-label="Execute search"
+                >
+                  →
+                </button>
+              </form>
+
+              {/* Wireframe 2.1: Suggested Searches */}
+              <div className="ask-hero-suggestions">
+                <span className="ask-hero-suggestions__label">Suggested topics:</span>
+                <div className="ask-hero-suggestions__chips">
+                  {STARTER_PROMPTS.map((prompt, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="ask-hero-suggestion-chip"
+                      onClick={() => handleSubmit(null, prompt.query)}
+                    >
+                      {prompt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Wireframe 2.1: Recent Research Threads if available */}
+              {conversations.length > 0 && (
+                <div className="ask-hero-recent-section">
+                  <div className="ask-hero-recent__heading">Recent Research Sessions</div>
+                  <div className="ask-hero-recent__grid">
+                    {conversations.slice(0, 3).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="ask-hero-recent-card"
+                        onClick={() => loadConversation(c.id)}
+                      >
+                        <span className="ask-hero-recent-card__icon">◈</span>
+                        <span className="ask-hero-recent-card__title">{c.title || 'Research Session'}</span>
+                        <span className="ask-hero-recent-card__arrow">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
+
             messages.map((msg, index) => (
               <div
                 key={index}

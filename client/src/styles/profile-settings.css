@@ -533,3 +533,314 @@ input:checked + .ps-slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   WIREFRAMES 2.2 & 2.3: SPLIT SIDEBAR LAYOUT & THEME/FONT PICKERS
+   ========================================================================== */
+.ps-split-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2.5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-16);
+}
+
+@media (max-width: 860px) {
+  .ps-split-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Sidebar */
+.ps-sidebar {
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border, #E5E7EB);
+  border-radius: 10px;
+  padding: 1.25rem;
+  height: fit-content;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ps-sidebar__title-block {
+  margin-bottom: 1rem;
+}
+
+.ps-sidebar__main-title {
+  font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-ink, #111827);
+  margin: 0;
+}
+
+.ps-sidebar__sub-title {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-tertiary, #9CA3AF);
+  font-weight: 600;
+}
+
+.ps-sidebar__search-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.ps-sidebar__search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.ps-sidebar__search-input {
+  width: 100%;
+  border: 1px solid var(--color-border, #D1D5DB);
+  border-radius: 6px;
+  padding: 6px 10px 6px 30px;
+  font-size: 0.8125rem;
+  color: var(--color-ink, #111827);
+  background: var(--color-surface-secondary, #F9FAFB);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.ps-sidebar__search-input:focus {
+  border-color: var(--color-accent, #7C3AED);
+  background: var(--color-surface, #FFFFFF);
+}
+
+.ps-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-secondary, #4B5563);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.ps-sidebar__nav-item:hover {
+  background: var(--color-surface-secondary, #F3F4F6);
+  color: var(--color-ink, #111827);
+}
+
+.ps-sidebar__nav-item--active {
+  background: var(--color-accent-light, #F5F3FF) !important;
+  color: var(--color-accent, #7C3AED) !important;
+  font-weight: 600;
+}
+
+/* Main Panel */
+.ps-main-panel {
+  min-width: 0;
+}
+
+/* Theme Tiles (Wireframe 2.2) */
+.ps-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .ps-tiles-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ps-theme-tile {
+  background: var(--color-surface, #FFFFFF);
+  border: 1.5px solid var(--color-border, #E5E7EB);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.ps-theme-tile:hover {
+  border-color: var(--color-accent, #7C3AED);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+}
+
+.ps-theme-tile--active {
+  border-color: var(--color-accent, #7C3AED) !important;
+  background: var(--color-accent-light, #FAF5FF) !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.ps-theme-tile__preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.ps-theme-tile__preview--light {
+  background: #FEF3C7;
+}
+
+.ps-theme-tile__preview--dark {
+  background: #1E293B;
+}
+
+.ps-theme-tile__preview--system {
+  background: #F3F4F6;
+}
+
+.ps-theme-tile__label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink, #111827);
+  margin-bottom: 2px;
+}
+
+.ps-theme-tile__sub {
+  font-size: 0.75rem;
+  color: var(--color-ink-tertiary, #6B7280);
+}
+
+/* Font Tiles (Wireframe 2.2) */
+.ps-font-tile {
+  background: var(--color-surface, #FFFFFF);
+  border: 1.5px solid var(--color-border, #E5E7EB);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.ps-font-tile:hover {
+  border-color: var(--color-accent, #7C3AED);
+}
+
+.ps-font-tile--active {
+  border-color: var(--color-accent, #7C3AED) !important;
+  background: var(--color-accent-light, #FAF5FF) !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.ps-font-tile__sample {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-ink, #111827);
+  margin-bottom: 0.5rem;
+}
+
+.ps-font-tile__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink, #111827);
+  margin-bottom: 2px;
+}
+
+.ps-font-tile__sub {
+  font-size: 0.6875rem;
+  color: var(--color-ink-tertiary, #6B7280);
+}
+
+/* Profile Avatar Large */
+.ps-avatar-lg {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #EDE9FE;
+  color: #7C3AED;
+  font-size: 1.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid var(--color-border-light, #DDD6FE);
+  flex-shrink: 0;
+}
+
+.ps-avatar-lg__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Metric Cards */
+.ps-metric-card {
+  background: var(--color-surface-secondary, #F9FAFB);
+  border: 1px solid var(--color-border-light, #E5E7EB);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-metric-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-ink, #111827);
+}
+
+.ps-metric-card__label {
+  font-size: 0.75rem;
+  color: var(--color-ink-tertiary, #6B7280);
+}
+
+/* Danger Zone Rows */
+.ps-danger-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ps-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border-light, #FEE2E2);
+}
+
+.ps-danger-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ps-danger-row__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink, #111827);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.ps-danger-row__desc {
+  font-size: 0.75rem;
+  color: var(--color-ink-secondary, #6B7280);
+  margin: 0;
+}
+
