@@ -85,6 +85,33 @@ export default async function eventsRoutes(app) {
   });
 
   /**
+   * GET /api/events/stats
+   * Get real-time key metrics across events, sources, articles, and claims.
+   */
+  app.get('/events/stats', async () => {
+    const { rows } = await query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM events) AS total_events,
+        (SELECT COUNT(*)::int FROM events WHERE status IN ('active', 'developing')) AS active_events,
+        (SELECT COUNT(*)::int FROM sources WHERE enabled = true) AS sources_analyzed,
+        (SELECT COUNT(*)::int FROM articles) AS articles_analyzed,
+        (SELECT COUNT(*)::int FROM claims) AS claims_tracked,
+        (SELECT COUNT(*)::int FROM claims WHERE verification_status = 'VERIFIED') AS verified_claims
+    `);
+
+    const stats = rows[0] || {
+      total_events: 0,
+      active_events: 0,
+      sources_analyzed: 0,
+      articles_analyzed: 0,
+      claims_tracked: 0,
+      verified_claims: 0,
+    };
+
+    return { stats };
+  });
+
+  /**
    * GET /api/events/live
    * Get latest live feed updates.
    */

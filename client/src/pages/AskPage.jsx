@@ -816,7 +816,7 @@ export default function AskPage() {
             <div className="ask-workspace__hero-welcome">
               {/* Wireframe 2.1: Large Centered Heading */}
               <h1 className="ask-workspace__hero-heading">
-                What news are you looking for?
+                WHAT ARE YOU LOOKING FOR?
               </h1>
               <p className="ask-workspace__hero-subheading">
                 Multi-source intelligence, cross-verified facts, and living context.
@@ -918,9 +918,9 @@ export default function AskPage() {
               {/* Wireframe 2.1: Recent Research Threads if available */}
               {conversations.length > 0 && (
                 <div className="ask-hero-recent-section">
-                  <div className="ask-hero-recent__heading">Recent Research Sessions</div>
+                  <div className="ask-hero-recent__heading">RECENT RESEARCH</div>
                   <div className="ask-hero-recent__grid">
-                    {conversations.slice(0, 3).map((c) => (
+                    {conversations.slice(0, 4).map((c) => (
                       <button
                         key={c.id}
                         type="button"

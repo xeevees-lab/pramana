@@ -1233,21 +1233,21 @@
 .ask-hero-search__send-btn {
   width: 38px;
   height: 38px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: none;
-  background: var(--color-accent, #7C3AED);
+  background: var(--color-accent);
   color: #FFFFFF;
   font-size: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
   flex-shrink: 0;
 }
 
 .ask-hero-search__send-btn:hover:not(:disabled) {
-  background: var(--color-accent-hover, #6D28D9);
+  background: var(--color-accent-hover);
 }
 
 .ask-hero-search__send-btn:disabled {
@@ -1266,8 +1266,11 @@
 }
 
 .ask-hero-suggestions__label {
-  font-size: 0.8125rem;
-  color: var(--color-ink-tertiary, #9CA3AF);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .ask-hero-suggestions__chips {
@@ -1278,44 +1281,44 @@
 }
 
 .ask-hero-suggestion-chip {
-  background: var(--color-surface, #FFFFFF);
-  border: 1px solid var(--color-border, #E5E7EB);
-  border-radius: 20px;
-  padding: 6px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 5px 12px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-ink, #374151);
+  color: var(--color-ink-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .ask-hero-suggestion-chip:hover {
-  border-color: var(--color-accent, #7C3AED);
-  color: var(--color-accent, #7C3AED);
-  background: var(--color-accent-light, #FAF5FF);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 /* Recent Research Sessions Cards */
 .ask-hero-recent-section {
   text-align: left;
-  background: var(--color-surface, #FFFFFF);
-  border: 1px solid var(--color-border, #E5E7EB);
-  border-radius: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   padding: 1.25rem;
 }
 
 .ask-hero-recent__heading {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-ink-tertiary, #6B7280);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-tertiary);
   margin-bottom: 0.75rem;
 }
 
 .ask-hero-recent__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
@@ -1329,29 +1332,29 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border-light, #F3F4F6);
-  background: var(--color-surface-secondary, #F9FAFB);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-secondary);
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .ask-hero-recent-card:hover {
-  border-color: #DDD6FE;
-  background: #FAF5FF;
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 .ask-hero-recent-card__icon {
-  color: var(--color-accent, #7C3AED);
-  font-size: 0.875rem;
+  color: var(--color-accent);
+  font-size: 0.8125rem;
 }
 
 .ask-hero-recent-card__title {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-ink, #111827);
+  color: var(--color-ink);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -1359,8 +1362,8 @@
 }
 
 .ask-hero-recent-card__arrow {
-  color: #9CA3AF;
-  font-size: 0.875rem;
+  color: var(--color-ink-tertiary);
+  font-size: 0.8125rem;
 }
 
 

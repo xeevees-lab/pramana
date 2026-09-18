@@ -20,14 +20,13 @@ export default function App() {
 
   // Apply persisted theme & font on startup
   useEffect(() => {
-    const savedTheme = localStorage.getItem('pramana_theme') || 'system';
+    const savedTheme = localStorage.getItem('pramana_theme') || 'light';
     const savedFont = localStorage.getItem('pramana_chat_font') || 'sans';
     
-    if (savedTheme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    if (savedTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
     } else {
-      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.documentElement.setAttribute('data-theme', 'light');
     }
     
     document.documentElement.setAttribute('data-chat-font', savedFont);

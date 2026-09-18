@@ -5,11 +5,11 @@ import useAuthStore from '../../stores/authStore.js';
 const PRIMARY_CATEGORIES = [
   { label: 'Home', path: '/explore' },
   { label: 'News', path: '/explore?category=news' },
-  { label: 'Sports', path: '/explore?category=sports' },
   { label: 'India', path: '/explore?category=india' },
   { label: 'World', path: '/explore?category=world' },
   { label: 'Tech', path: '/explore?category=technology' },
   { label: 'Business', path: '/explore?category=business' },
+  { label: 'Sports', path: '/explore?category=sports' },
   { label: 'Live', path: '/live', isLive: true },
 ];
 

@@ -10,7 +10,7 @@ export default function SettingsPage() {
   const [settingsFilter, setSettingsFilter] = useState('');
 
   // Theme & Appearance state
-  const [theme, setTheme] = useState(() => localStorage.getItem('pramana_theme') || 'system');
+  const [theme, setTheme] = useState(() => localStorage.getItem('pramana_theme') || 'light');
   const [chatFont, setChatFont] = useState(() => localStorage.getItem('pramana_chat_font') || 'sans');
 
   // AI & Research Form state
