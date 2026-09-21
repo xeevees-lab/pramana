@@ -1,0 +1,294 @@
+/* ==========================================================================
+   Article Dossier Styles — Institutional News Intelligence
+   ========================================================================== */
+
+.article-dossier-wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--space-4, 1rem) 0 var(--space-12, 3rem);
+}
+
+.article-dossier__breadcrumb {
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.article-dossier__back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-tertiary, #64748b);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.article-dossier__back-link:hover {
+  color: var(--color-accent, #1d4ed8);
+}
+
+.article-dossier__header {
+  margin-bottom: var(--space-6, 1.5rem);
+  padding-bottom: var(--space-4, 1rem);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.article-dossier__tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-3, 0.75rem);
+  flex-wrap: wrap;
+}
+
+.article-dossier__source-badge {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--color-ink-secondary, #334155);
+  background: var(--color-surface-secondary, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.article-dossier__reliability {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--color-verified, #166534);
+  background: var(--color-verified-bg, #f0fdf4);
+  border: 1px solid rgba(22, 101, 52, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.article-dossier__headline {
+  font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
+  font-size: 2.125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-ink, #0f172a);
+  margin: 0 0 var(--space-4, 1rem) 0;
+  letter-spacing: -0.015em;
+}
+
+.article-dossier__meta-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-tertiary, #64748b);
+  flex-wrap: wrap;
+}
+
+.article-dossier__meta-author {
+  color: var(--color-ink-secondary, #334155);
+}
+
+.article-dossier__original-link {
+  color: var(--color-accent, #1d4ed8);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.article-dossier__original-link:hover {
+  text-decoration: underline;
+}
+
+.article-dossier__figure {
+  margin: 0 0 var(--space-6, 1.5rem) 0;
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.article-dossier__image {
+  width: 100%;
+  max-height: 440px;
+  object-fit: cover;
+  display: block;
+}
+
+.article-dossier__figcaption {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-muted, #94a3b8);
+  padding: 6px 12px;
+  background: var(--color-surface-secondary, #f8fafc);
+  text-align: right;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.article-dossier__body {
+  font-family: var(--font-serif, 'Source Serif 4', Georgia, serif);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--color-ink-secondary, #334155);
+  margin-bottom: var(--space-8, 2rem);
+}
+
+.article-dossier__body p {
+  margin: 0 0 1.25rem 0;
+  white-space: pre-line;
+}
+
+/* ==========================================================================
+   Knowledge Graph & Intelligence Linkage Card
+   ========================================================================== */
+
+.article-knowledge-card {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-5, 1.25rem);
+  margin-top: var(--space-6, 1.5rem);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+.article-knowledge-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-2, 0.5rem);
+}
+
+.article-knowledge-card__icon {
+  font-size: 1.125rem;
+  color: var(--color-accent, #1d4ed8);
+}
+
+.article-knowledge-card__title {
+  font-size: var(--text-sm, 0.8125rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink, #0f172a);
+  margin: 0;
+}
+
+.article-knowledge-card__desc {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-tertiary, #64748b);
+  margin: 0 0 var(--space-4, 1rem) 0;
+  line-height: 1.5;
+}
+
+.article-linked-event {
+  background: var(--color-surface-secondary, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-4, 1rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.article-linked-event__label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  color: var(--color-ink-tertiary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.article-linked-event__title {
+  font-size: var(--text-base, 0.9375rem);
+  font-weight: 600;
+  margin: 0 0 6px 0;
+}
+
+.article-linked-event__title a {
+  color: var(--color-ink, #0f172a);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.article-linked-event__title a:hover {
+  color: var(--color-accent, #1d4ed8);
+}
+
+.article-linked-event__summary {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-secondary, #334155);
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.article-linked-event__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-tertiary, #64748b);
+  flex-wrap: wrap;
+}
+
+.article-claims-section {
+  margin-top: var(--space-4, 1rem);
+}
+
+.article-section-subhead {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  color: var(--color-ink-secondary, #334155);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: var(--space-2, 0.5rem);
+}
+
+.article-claims-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.article-claim-item {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
+  padding: 8px 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.article-claim-text {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-ink-secondary, #334155);
+  line-height: 1.4;
+}
+
+.article-related-events-section {
+  margin-top: var(--space-4, 1rem);
+  padding-top: var(--space-4, 1rem);
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.article-related-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.article-related-chip {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-accent, #1d4ed8);
+  background: var(--color-accent-light, #eff6ff);
+  border: 1px solid rgba(29, 78, 216, 0.15);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm, 4px);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.article-related-chip:hover {
+  background: var(--color-accent, #1d4ed8);
+  color: #ffffff;
+}

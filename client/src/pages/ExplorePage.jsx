@@ -17,21 +17,23 @@ function formatTimeAgo(dateString) {
 }
 
 // Map high-level categories to backend categories
+// Map high-level categories to backend categories
 const CATEGORY_MAP = {
   all: null,
   news: 'politics',
   politics: 'politics',
-  sports: 'culture',
-  india: 'india',
+  sports: 'sports',
+  india: null, // India is a geographic focus, queried via search query (q=india)
   world: 'diplomacy',
   tech: 'technology',
   technology: 'technology',
-  business: 'economics',
+  business: 'business',
   economics: 'economics',
-  science: 'technology',
+  markets: 'markets',
+  science: 'science',
   ai: 'technology',
   climate: 'climate',
-  environment: 'climate',
+  environment: 'environment',
   culture: 'culture',
   arts: 'culture',
   travel: 'culture',
@@ -46,6 +48,8 @@ export default function ExplorePage() {
   const [events, setEvents] = useState([]);
   const [liveEntries, setLiveEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
   const [metrics, setMetrics] = useState({
     total_events: 0,
@@ -63,50 +67,59 @@ export default function ExplorePage() {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setError(null);
 
     const queryParams = new URLSearchParams();
-    const mappedCat = CATEGORY_MAP[rawCategory] || (rawCategory !== 'all' ? rawCategory : null);
-    
-    if (mappedCat && mappedCat !== 'all') {
-      queryParams.set('category', mappedCat);
-    }
-    if (searchQuery.trim()) {
-      queryParams.set('q', searchQuery.trim());
+    const queryStr = urlSearchQuery.trim();
+
+    if (rawCategory === 'india') {
+      // India is a regional topic: query existing corpus for India coverage
+      queryParams.set('q', queryStr ? `${queryStr} india` : 'india');
+    } else {
+      const mappedCat = CATEGORY_MAP[rawCategory] || (rawCategory !== 'all' ? rawCategory : null);
+      if (mappedCat && mappedCat !== 'all') {
+        queryParams.set('category', mappedCat);
+      }
+      if (queryStr) {
+        queryParams.set('q', queryStr);
+      }
     }
     queryParams.set('limit', '50');
 
     Promise.all([
       api.get(`/events?${queryParams.toString()}`),
       api.get('/events/live?limit=15'),
-      api.get('/events/stats').catch(() => ({ stats: {} })),
+      api.get('/events/stats').catch(() => ({ stats: null })),
     ])
       .then(([eventsData, liveData, statsData]) => {
         if (!isMounted) return;
-        setEvents(eventsData.events || []);
-        setLiveEntries(liveData.entries || []);
+        setEvents(eventsData?.events || []);
+        setLiveEntries(liveData?.entries || []);
         if (statsData?.stats) {
           setMetrics(statsData.stats);
         } else {
           setMetrics({
-            total_events: eventsData.pagination?.total || 0,
-            active_events: eventsData.events?.length || 0,
+            total_events: eventsData?.pagination?.total || eventsData?.events?.length || 0,
+            active_events: eventsData?.events?.length || 0,
             sources_analyzed: 12,
             articles_analyzed: 1070,
             claims_tracked: 83,
           });
         }
+        setError(null);
         setLoading(false);
       })
       .catch((err) => {
         if (!isMounted) return;
         console.error('Failed to load explore data:', err);
+        setError(err.message || 'Unable to load stories');
         setLoading(false);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [rawCategory, searchQuery]);
+  }, [rawCategory, urlSearchQuery, retryCount]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -132,16 +145,21 @@ export default function ExplorePage() {
   // Structured Categorical Desks
   const indiaStories = events.filter(
     (e) =>
+      rawCategory === 'india' ||
       e.category?.toLowerCase() === 'india' ||
       e.title?.toLowerCase().includes('india') ||
       e.summary?.toLowerCase().includes('india') ||
-      e.summary?.toLowerCase().includes('delhi')
+      e.summary?.toLowerCase().includes('delhi') ||
+      e.country_code === 'IN' ||
+      e.location_name?.toLowerCase().includes('india')
   );
 
   const worldStories = events.filter(
     (e) =>
+      rawCategory === 'world' ||
       e.category?.toLowerCase() === 'diplomacy' ||
       e.category?.toLowerCase() === 'world' ||
+      e.category?.toLowerCase() === 'conflict' ||
       e.title?.toLowerCase().includes('global') ||
       e.title?.toLowerCase().includes('un ') ||
       e.title?.toLowerCase().includes('europe') ||
@@ -152,6 +170,8 @@ export default function ExplorePage() {
 
   const techStories = events.filter(
     (e) =>
+      rawCategory === 'tech' ||
+      rawCategory === 'technology' ||
       e.category?.toLowerCase() === 'technology' ||
       e.title?.toLowerCase().includes('ai') ||
       e.title?.toLowerCase().includes('quantum') ||
@@ -161,8 +181,11 @@ export default function ExplorePage() {
 
   const businessStories = events.filter(
     (e) =>
+      rawCategory === 'business' ||
+      rawCategory === 'economics' ||
       e.category?.toLowerCase() === 'economics' ||
       e.category?.toLowerCase() === 'business' ||
+      e.category?.toLowerCase() === 'markets' ||
       e.title?.toLowerCase().includes('market') ||
       e.title?.toLowerCase().includes('stocks') ||
       e.title?.toLowerCase().includes('bank') ||
@@ -170,31 +193,23 @@ export default function ExplorePage() {
       e.title?.toLowerCase().includes('trade')
   );
 
-  const climateStories = events.filter(
-    (e) =>
-      e.category?.toLowerCase() === 'climate' ||
-      e.title?.toLowerCase().includes('flood') ||
-      e.title?.toLowerCase().includes('weather') ||
-      e.title?.toLowerCase().includes('health') ||
-      e.title?.toLowerCase().includes('earth')
-  );
-
   // Fallback distribution for sections if category matches are sparse
   const getSectionStories = (specificList, startIndex, count = 3) => {
     if (specificList.length >= count) return specificList.slice(0, count);
+    if (rawCategory !== 'all') return specificList;
     const combined = [...specificList, ...events.slice(startIndex, startIndex + count)];
     const unique = Array.from(new Map(combined.map((item) => [item.id, item])).values());
     return unique.slice(0, count);
   };
 
-  const finalIndia = getSectionStories(indiaStories, 0, 3);
-  const finalWorld = getSectionStories(worldStories, 3, 3);
-  const finalTech = getSectionStories(techStories, 6, 3);
-  const finalBusiness = getSectionStories(businessStories, 9, 3);
+  const finalIndia = getSectionStories(indiaStories, 0, 4);
+  const finalWorld = getSectionStories(worldStories, 3, 4);
+  const finalTech = getSectionStories(techStories, 6, 4);
+  const finalBusiness = getSectionStories(businessStories, 9, 4);
 
   // Intelligence Brief Highlights
   const topDevelopments = events.filter((e) => e.severity === 'critical' || e.severity === 'high' || (e.source_count > 1)).slice(0, 3);
-  const emergingStories = events.slice(0, 3);
+  const emergingStories = events.length > 0 ? events.slice(0, 3) : [];
 
   return (
     <div className="explore-hub">
@@ -271,14 +286,33 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {loading ? (
+      {error ? (
+        <div className="empty-state" style={{ margin: '4rem auto', textAlign: 'center' }}>
+          <div className="empty-state__icon" aria-hidden="true" style={{ fontSize: '2.5rem', marginBottom: '1rem', color: 'var(--color-critical, #dc2626)' }}>
+            ⚠
+          </div>
+          <h2 className="empty-state__title" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+            Unable to load stories
+          </h2>
+          <p className="empty-state__text" style={{ color: 'var(--color-ink-tertiary)', maxWidth: '460px', margin: '0.5rem auto 1.5rem' }}>
+            {error}. The news intelligence service could not complete the request.
+          </p>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => setRetryCount((c) => c + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      ) : loading ? (
         <div className="loading" style={{ minHeight: '45vh' }}>
           <div className="loading__spinner" />
         </div>
       ) : events.length === 0 ? (
         <div className="empty-state" style={{ margin: '4rem auto', textAlign: 'center' }}>
           <div className="empty-state__icon" aria-hidden="true" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-            ◎
+            ◈
           </div>
           <h2 className="empty-state__title" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
             No Corroborated Events Found
@@ -477,158 +511,211 @@ export default function ExplorePage() {
             </div>
           </section>
 
-          {/* 6. EDITORIAL NEWS DESKS (India, World, Technology, Business) */}
+          {/* 6. EDITORIAL NEWS DESKS */}
           {/* India Desk */}
-          <section className="editorial-desk-section" aria-labelledby="desk-india">
-            <div className="desk-section-header">
-              <div className="desk-header-left">
-                <span className="desk-header-tag">DESK</span>
-                <h2 id="desk-india" className="desk-header-title">INDIA</h2>
+          {indiaStories.length > 0 && (
+            <section className="editorial-desk-section" aria-labelledby="desk-india">
+              <div className="desk-section-header">
+                <div className="desk-header-left">
+                  <span className="desk-header-tag">DESK</span>
+                  <h2 id="desk-india" className="desk-header-title">INDIA</h2>
+                </div>
+                {rawCategory !== 'india' && (
+                  <Link to="/explore?category=india" className="desk-header-link">
+                    View All India Intelligence →
+                  </Link>
+                )}
               </div>
-              <Link to="/explore?category=india" className="desk-header-link">
-                View All India Intelligence →
-              </Link>
-            </div>
-            <div className="desk-cards-grid">
-              {finalIndia.map((item) => (
-                <article key={item.id} className="clean-story-card">
-                  <div className="clean-story-card__category">
-                    {item.category?.toUpperCase() || 'INDIA'} · {item.location_name || 'SOUTH ASIA'}
-                  </div>
-                  <h3 className="clean-story-card__headline">
-                    <Link to={`/event/${item.id}`}>{item.title}</Link>
-                  </h3>
-                  <p className="clean-story-card__summary">
-                    {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
-                  </p>
-                  <div className="clean-story-card__footer">
-                    <div className="clean-story-card__meta">
-                      <span>{formatTimeAgo(item.last_updated_at)}</span>
+              <div className="desk-cards-grid">
+                {finalIndia.map((item) => (
+                  <article key={item.id} className="clean-story-card">
+                    <div className="clean-story-card__category">
+                      {item.category?.toUpperCase() || 'INDIA'} · {item.location_name || 'SOUTH ASIA'}
                     </div>
-                    <div className="clean-story-card__badges">
-                      <span className="clean-badge">{item.source_count || 1} SOURCES</span>
-                      <span className="clean-badge">CLAIMS</span>
-                      <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                    <h3 className="clean-story-card__headline">
+                      <Link to={`/event/${item.id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="clean-story-card__summary">
+                      {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
+                    </p>
+                    <div className="clean-story-card__footer">
+                      <div className="clean-story-card__meta">
+                        <span>{formatTimeAgo(item.last_updated_at)}</span>
+                      </div>
+                      <div className="clean-story-card__badges">
+                        <span className="clean-badge">{item.source_count || 1} SOURCES</span>
+                        <span className="clean-badge">CLAIMS</span>
+                        <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* World Desk */}
-          <section className="editorial-desk-section" aria-labelledby="desk-world">
-            <div className="desk-section-header">
-              <div className="desk-header-left">
-                <span className="desk-header-tag">DESK</span>
-                <h2 id="desk-world" className="desk-header-title">WORLD</h2>
+          {worldStories.length > 0 && (
+            <section className="editorial-desk-section" aria-labelledby="desk-world">
+              <div className="desk-section-header">
+                <div className="desk-header-left">
+                  <span className="desk-header-tag">DESK</span>
+                  <h2 id="desk-world" className="desk-header-title">WORLD</h2>
+                </div>
+                {rawCategory !== 'world' && (
+                  <Link to="/explore?category=world" className="desk-header-link">
+                    View All World Intelligence →
+                  </Link>
+                )}
               </div>
-              <Link to="/explore?category=world" className="desk-header-link">
-                View All World Intelligence →
-              </Link>
-            </div>
-            <div className="desk-cards-grid">
-              {finalWorld.map((item) => (
-                <article key={item.id} className="clean-story-card">
-                  <div className="clean-story-card__category">
-                    {item.category?.toUpperCase() || 'WORLD'} · GLOBAL
-                  </div>
-                  <h3 className="clean-story-card__headline">
-                    <Link to={`/event/${item.id}`}>{item.title}</Link>
-                  </h3>
-                  <p className="clean-story-card__summary">
-                    {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
-                  </p>
-                  <div className="clean-story-card__footer">
-                    <div className="clean-story-card__meta">
-                      <span>{formatTimeAgo(item.last_updated_at)}</span>
+              <div className="desk-cards-grid">
+                {finalWorld.map((item) => (
+                  <article key={item.id} className="clean-story-card">
+                    <div className="clean-story-card__category">
+                      {item.category?.toUpperCase() || 'WORLD'} · GLOBAL
                     </div>
-                    <div className="clean-story-card__badges">
-                      <span className="clean-badge">{item.source_count || 1} SOURCES</span>
-                      <span className="clean-badge">CLAIMS</span>
-                      <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                    <h3 className="clean-story-card__headline">
+                      <Link to={`/event/${item.id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="clean-story-card__summary">
+                      {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
+                    </p>
+                    <div className="clean-story-card__footer">
+                      <div className="clean-story-card__meta">
+                        <span>{formatTimeAgo(item.last_updated_at)}</span>
+                      </div>
+                      <div className="clean-story-card__badges">
+                        <span className="clean-badge">{item.source_count || 1} SOURCES</span>
+                        <span className="clean-badge">CLAIMS</span>
+                        <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Technology Desk */}
-          <section className="editorial-desk-section" aria-labelledby="desk-tech">
-            <div className="desk-section-header">
-              <div className="desk-header-left">
-                <span className="desk-header-tag">DESK</span>
-                <h2 id="desk-tech" className="desk-header-title">TECHNOLOGY</h2>
+          {techStories.length > 0 && (
+            <section className="editorial-desk-section" aria-labelledby="desk-tech">
+              <div className="desk-section-header">
+                <div className="desk-header-left">
+                  <span className="desk-header-tag">DESK</span>
+                  <h2 id="desk-tech" className="desk-header-title">TECHNOLOGY</h2>
+                </div>
+                {!['tech', 'technology'].includes(rawCategory) && (
+                  <Link to="/explore?category=technology" className="desk-header-link">
+                    View All Technology Intelligence →
+                  </Link>
+                )}
               </div>
-              <Link to="/explore?category=technology" className="desk-header-link">
-                View All Technology Intelligence →
-              </Link>
-            </div>
-            <div className="desk-cards-grid">
-              {finalTech.map((item) => (
-                <article key={item.id} className="clean-story-card">
-                  <div className="clean-story-card__category">
-                    {item.category?.toUpperCase() || 'TECH'} · INNOVATION
-                  </div>
-                  <h3 className="clean-story-card__headline">
-                    <Link to={`/event/${item.id}`}>{item.title}</Link>
-                  </h3>
-                  <p className="clean-story-card__summary">
-                    {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
-                  </p>
-                  <div className="clean-story-card__footer">
-                    <div className="clean-story-card__meta">
-                      <span>{formatTimeAgo(item.last_updated_at)}</span>
+              <div className="desk-cards-grid">
+                {finalTech.map((item) => (
+                  <article key={item.id} className="clean-story-card">
+                    <div className="clean-story-card__category">
+                      {item.category?.toUpperCase() || 'TECH'} · INNOVATION
                     </div>
-                    <div className="clean-story-card__badges">
-                      <span className="clean-badge">{item.source_count || 1} SOURCES</span>
-                      <span className="clean-badge">CLAIMS</span>
-                      <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                    <h3 className="clean-story-card__headline">
+                      <Link to={`/event/${item.id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="clean-story-card__summary">
+                      {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
+                    </p>
+                    <div className="clean-story-card__footer">
+                      <div className="clean-story-card__meta">
+                        <span>{formatTimeAgo(item.last_updated_at)}</span>
+                      </div>
+                      <div className="clean-story-card__badges">
+                        <span className="clean-badge">{item.source_count || 1} SOURCES</span>
+                        <span className="clean-badge">CLAIMS</span>
+                        <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Business Desk */}
-          <section className="editorial-desk-section" aria-labelledby="desk-business">
-            <div className="desk-section-header">
-              <div className="desk-header-left">
-                <span className="desk-header-tag">DESK</span>
-                <h2 id="desk-business" className="desk-header-title">BUSINESS &amp; MARKETS</h2>
+          {businessStories.length > 0 && (
+            <section className="editorial-desk-section" aria-labelledby="desk-business">
+              <div className="desk-section-header">
+                <div className="desk-header-left">
+                  <span className="desk-header-tag">DESK</span>
+                  <h2 id="desk-business" className="desk-header-title">BUSINESS &amp; MARKETS</h2>
+                </div>
+                {!['business', 'economics'].includes(rawCategory) && (
+                  <Link to="/explore?category=business" className="desk-header-link">
+                    View All Business Intelligence →
+                  </Link>
+                )}
               </div>
-              <Link to="/explore?category=business" className="desk-header-link">
-                View All Business Intelligence →
-              </Link>
-            </div>
-            <div className="desk-cards-grid">
-              {finalBusiness.map((item) => (
-                <article key={item.id} className="clean-story-card">
-                  <div className="clean-story-card__category">
-                    {item.category?.toUpperCase() || 'BUSINESS'} · MARKETS
-                  </div>
-                  <h3 className="clean-story-card__headline">
-                    <Link to={`/event/${item.id}`}>{item.title}</Link>
-                  </h3>
-                  <p className="clean-story-card__summary">
-                    {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
-                  </p>
-                  <div className="clean-story-card__footer">
-                    <div className="clean-story-card__meta">
-                      <span>{formatTimeAgo(item.last_updated_at)}</span>
+              <div className="desk-cards-grid">
+                {finalBusiness.map((item) => (
+                  <article key={item.id} className="clean-story-card">
+                    <div className="clean-story-card__category">
+                      {item.category?.toUpperCase() || 'BUSINESS'} · MARKETS
                     </div>
-                    <div className="clean-story-card__badges">
-                      <span className="clean-badge">{item.source_count || 1} SOURCES</span>
-                      <span className="clean-badge">CLAIMS</span>
-                      <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                    <h3 className="clean-story-card__headline">
+                      <Link to={`/event/${item.id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="clean-story-card__summary">
+                      {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
+                    </p>
+                    <div className="clean-story-card__footer">
+                      <div className="clean-story-card__meta">
+                        <span>{formatTimeAgo(item.last_updated_at)}</span>
+                      </div>
+                      <div className="clean-story-card__badges">
+                        <span className="clean-badge">{item.source_count || 1} SOURCES</span>
+                        <span className="clean-badge">CLAIMS</span>
+                        <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Active Category Desk if not in default 4 desks (e.g. climate, sports, news) */}
+          {!['all', 'india', 'world', 'tech', 'technology', 'business', 'economics'].includes(rawCategory) && events.length > 0 && (
+            <section className="editorial-desk-section" aria-labelledby="desk-custom">
+              <div className="desk-section-header">
+                <div className="desk-header-left">
+                  <span className="desk-header-tag">DESK</span>
+                  <h2 id="desk-custom" className="desk-header-title">{rawCategory.toUpperCase()}</h2>
+                </div>
+              </div>
+              <div className="desk-cards-grid">
+                {events.map((item) => (
+                  <article key={item.id} className="clean-story-card">
+                    <div className="clean-story-card__category">
+                      {item.category?.toUpperCase() || rawCategory.toUpperCase()}
+                    </div>
+                    <h3 className="clean-story-card__headline">
+                      <Link to={`/event/${item.id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="clean-story-card__summary">
+                      {item.summary ? (item.summary.length > 130 ? item.summary.slice(0, 130) + '...' : item.summary) : ''}
+                    </p>
+                    <div className="clean-story-card__footer">
+                      <div className="clean-story-card__meta">
+                        <span>{formatTimeAgo(item.last_updated_at)}</span>
+                      </div>
+                      <div className="clean-story-card__badges">
+                        <span className="clean-badge">{item.source_count || 1} SOURCES</span>
+                        <span className="clean-badge">CLAIMS</span>
+                        <Link to={`/event/${item.id}`} className="clean-badge clean-badge--link">EVENT</Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>

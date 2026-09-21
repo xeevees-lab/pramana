@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api.js';
+import '../styles/article-dossier.css';
 
 function formatDate(dateString) {
   if (!dateString) return 'Recent';
@@ -56,9 +57,9 @@ export default function ArticlePage() {
   if (error || !article) {
     return (
       <div className="empty-state" style={{ maxWidth: '640px', margin: '4rem auto', textAlign: 'center' }}>
-        <div className="empty-state__icon" aria-hidden="true" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>◎</div>
+        <div className="empty-state__icon" aria-hidden="true" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>◈</div>
         <h2 className="empty-state__title" style={{ fontSize: '1.25rem', fontWeight: 600 }}>Article Dispatch Unavailable</h2>
-        <p className="empty-state__text" style={{ color: '#6B7280' }}>
+        <p className="empty-state__text" style={{ color: 'var(--color-ink-tertiary)' }}>
           {error || 'The requested article could not be found or has not yet been processed.'}
         </p>
         <div style={{ marginTop: '1.5rem' }}>
@@ -87,64 +88,47 @@ export default function ArticlePage() {
   } = article;
 
   return (
-    <article className="article-dossier" aria-labelledby="article-headline" style={{ maxWidth: '860px', margin: '0 auto', padding: '1rem 0' }}>
+    <article className="article-dossier-wrap" aria-labelledby="article-headline">
       {/* 1. Navigation Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ marginBottom: '1.25rem' }}>
-        <Link to="/explore" style={{ fontSize: '0.8125rem', color: '#6B7280', textDecoration: 'none' }}>
+      <nav aria-label="Breadcrumb" className="article-dossier__breadcrumb">
+        <Link to="/explore" className="article-dossier__back-link">
           ← Back to Living Intelligence
         </Link>
       </nav>
 
       {/* 2. Article Header */}
-      <header className="article-dossier__header" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      <header className="article-dossier__header">
+        <div className="article-dossier__tags">
           {category && (
             <span className={`category-tag category-tag--${category.toLowerCase()}`}>
               {category}
             </span>
           )}
           {source_name && (
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: '#374151',
-              background: '#F3F4F6',
-              padding: '2px 8px',
-              borderRadius: '4px',
-            }}>
+            <span className="article-dossier__source-badge">
               {source_name}
             </span>
           )}
           {source_reliability && (
-            <span style={{ fontSize: '0.6875rem', color: '#16A34A', fontWeight: 600 }}>
+            <span className="article-dossier__reliability">
               {(source_reliability * 100).toFixed(0)}% Reliability
             </span>
           )}
         </div>
 
-        <h1
-          id="article-headline"
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '2.25rem',
-            fontWeight: 700,
-            lineHeight: 1.25,
-            color: '#111827',
-            margin: '0 0 1rem 0',
-          }}
-        >
+        <h1 id="article-headline" className="article-dossier__headline">
           {title}
         </h1>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.8125rem', color: '#6B7280', flexWrap: 'wrap' }}>
-          {author && <span>By <strong>{author}</strong></span>}
+        <div className="article-dossier__meta-row">
+          {author && <span className="article-dossier__meta-author">By <strong>{author}</strong></span>}
           <span>{formatDate(published_at)}</span>
           {sourceUrl && (
             <a
               href={sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#2563EB', textDecoration: 'none', fontWeight: 500, marginLeft: 'auto' }}
+              className="article-dossier__original-link"
             >
               Original Dispatch Source ↗
             </a>
@@ -154,14 +138,14 @@ export default function ArticlePage() {
 
       {/* 3. Article Image (if present) */}
       {image_url && (
-        <figure style={{ margin: '0 0 2rem 0', borderRadius: '8px', overflow: 'hidden' }}>
+        <figure className="article-dossier__figure">
           <img
             src={image_url}
             alt={title}
-            style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }}
+            className="article-dossier__image"
           />
           {image_attribution && (
-            <figcaption style={{ fontSize: '0.6875rem', color: '#9CA3AF', padding: '6px 0', textAlign: 'right' }}>
+            <figcaption className="article-dossier__figcaption">
               {image_attribution}
             </figcaption>
           )}
@@ -169,54 +153,39 @@ export default function ArticlePage() {
       )}
 
       {/* 4. Article Summary / Excerpt */}
-      <div style={{ fontSize: '1.0625rem', lineHeight: 1.7, color: '#1F2937', marginBottom: '2.5rem' }}>
-        <p style={{ whiteSpace: 'pre-line' }}>{summary}</p>
+      <div className="article-dossier__body">
+        <p>{summary}</p>
       </div>
 
-      {/* 5. CONNECTED PRAMĀṆA KNOWLEDGE GRAPH (Requirement 4) */}
-      <section
-        className="article-knowledge-card"
-        style={{
-          background: 'linear-gradient(135deg, #FAF5FF 0%, #FFFFFF 100%)',
-          border: '1px solid #DDD6FE',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          marginTop: '2rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '1.25rem', color: '#7C3AED' }}>◈</span>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+      {/* 5. CONNECTED PRAMĀṆA KNOWLEDGE GRAPH */}
+      <section className="article-knowledge-card">
+        <div className="article-knowledge-card__header">
+          <span className="article-knowledge-card__icon">◈</span>
+          <h2 className="article-knowledge-card__title">
             Connected PRAMĀṆA Knowledge Graph
           </h2>
         </div>
-        <p style={{ fontSize: '0.875rem', color: '#4B5563', margin: '0 0 1.25rem 0' }}>
+        <p className="article-knowledge-card__desc">
           This article has been processed, cross-referenced with global newsfeeds, and clustered into PRAMĀṆA&apos;s living multi-source intelligence model.
         </p>
 
         {/* Linked Living Event */}
         {event ? (
-          <div style={{
-            background: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '6px',
-            padding: '1rem',
-            marginBottom: '1rem',
-          }}>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="article-linked-event">
+            <span className="article-linked-event__label">
               Linked Living Event:
             </span>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '4px 0 8px 0' }}>
-              <Link to={`/event/${event.id}`} style={{ color: '#7C3AED', textDecoration: 'none' }}>
+            <h3 className="article-linked-event__title">
+              <Link to={`/event/${event.id}`}>
                 {event.title} ↗
               </Link>
             </h3>
             {event.summary && (
-              <p style={{ fontSize: '0.8125rem', color: '#4B5563', margin: 0 }}>
+              <p className="article-linked-event__summary">
                 {event.summary}
               </p>
             )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', fontSize: '0.75rem', color: '#6B7280' }}>
+            <div className="article-linked-event__meta">
               <span>Status: <strong>{event.status || 'Verified'}</strong></span>
               <span>·</span>
               <span>Severity: <strong>{event.severity || 'Normal'}</strong></span>
@@ -225,31 +194,20 @@ export default function ArticlePage() {
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: '0.8125rem', color: '#6B7280', fontStyle: 'italic', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-ink-tertiary)', fontStyle: 'italic', marginBottom: '1rem' }}>
             This article is awaiting clustering into an active living event dossier.
           </div>
         )}
 
         {/* Evaluated Claims Extracted from this Dispatch */}
         {claims.length > 0 && (
-          <div style={{ marginTop: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase' }}>
+          <div className="article-claims-section">
+            <span className="article-section-subhead">
               Extracted Assertions &amp; Claim Status ({claims.length}):
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+            <div className="article-claims-list">
               {claims.map((claim, idx) => (
-                <div
-                  key={claim.id || idx}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '6px',
-                    padding: '8px 12px',
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: '10px',
-                  }}
-                >
+                <div key={claim.id || idx} className="article-claim-item">
                   <span
                     className={`badge ${
                       claim.verification_status === 'VERIFIED'
@@ -262,7 +220,7 @@ export default function ArticlePage() {
                   >
                     {claim.verification_status}
                   </span>
-                  <span style={{ fontSize: '0.8125rem', color: '#1F2937' }}>
+                  <span className="article-claim-text">
                     &ldquo;{claim.claim_text || claim.text}&rdquo;
                   </span>
                 </div>
@@ -273,24 +231,16 @@ export default function ArticlePage() {
 
         {/* Related Living Events */}
         {relatedEvents.length > 0 && (
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E5E7EB' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase' }}>
+          <div className="article-related-events-section">
+            <span className="article-section-subhead">
               Related Contextual Events:
             </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+            <div className="article-related-chips">
               {relatedEvents.map((rel) => (
                 <Link
                   key={rel.id}
                   to={`/event/${rel.id}`}
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#6D28D9',
-                    background: '#EDE9FE',
-                    padding: '3px 10px',
-                    borderRadius: '4px',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                  }}
+                  className="article-related-chip"
                 >
                   {rel.title} ↗
                 </Link>
